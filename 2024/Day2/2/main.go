@@ -5,29 +5,52 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
 
 // ********* Advent of Code 2024 *********
-// --- Day 2: Red-Nosed Reports --- Puzzle 1
+// --- Day 2: Red-Nosed Reports --- Puzzle 2
 // https://adventofcode.com/2024/day/2
 
 func main() {
 
 	reports := GetDataFromFile("data.txt")
 
-	answer := day2_1(reports)
+	answer := day2_2(reports)
 	fmt.Println(answer)
 
 }
 
-func day2_1(list []string) int {
+func day2_2(list []string) int {
 
 	safeCount := 0
 
+	// преобразование всех строк в слайсы целых чисел -- "7 6 4 2 1" -> [7 6 4 2 1]
+	var reportsInt [][]int
+
 	for _, v := range list {
-		if IsLineSafe(v) {
+
+		var sliceOfStrings []string
+		var sliceOfInts []int
+
+		sliceOfStrings = strings.Split(v, " ")
+
+		for _, v := range sliceOfStrings {
+			num, err := strconv.Atoi(v)
+			if err != nil {
+				fmt.Println(err)
+			}
+			sliceOfInts = append(sliceOfInts, num)
+		}
+
+		reportsInt = append(reportsInt, sliceOfInts)
+	}
+
+	// проверка каждого элемента на безопасность по условиям задачи
+	for _, v := range reportsInt {
+		if IsSafe(v) {
 			safeCount++
 		}
 	}
@@ -59,36 +82,23 @@ func GetDataFromFile(filename string) []string {
 	return result
 }
 
-// Функция проверяет является ли переданная строка безопасной с точки зрения формулировки задачи
-func IsLineSafe(line string) bool {
+// Функция проверяет является ли переданный слайс целых чисел безопасным
+func IsSafe(input []int) bool {
 
-	var sliceOfStrings []string
-	var sliceOfInts []int
 	var isIncreasing bool
 	var isDecreasing bool
 	var result bool
 
-	// преобразование исходной строки в слайс целых чисел -- "7 6 4 2 1" -> [7 6 4 2 1]
-	sliceOfStrings = strings.Split(line, " ")
-
-	for _, v := range sliceOfStrings {
-		num, err := strconv.Atoi(v)
-		if err != nil {
-			fmt.Println(err)
-		}
-		sliceOfInts = append(sliceOfInts, num)
-	}
-
 	// проверка на безопасность последовательности по описанным в задании правилам
-	for i := range sliceOfInts {
+	for i := range input {
 
-		//если это последний элемент слайса - прервать цикл
-		if i == len(sliceOfInts)-1 {
+		// если это последний элемент слайса - прервать цикл
+		if i == len(input)-1 {
 			break
 		}
 
-		current := sliceOfInts[i]
-		next := sliceOfInts[i+1]
+		current := input[i]
+		next := input[i+1]
 		diff := math.Abs(float64(current) - float64(next))
 
 		// разница текущего и следующего элемента
@@ -118,8 +128,22 @@ func IsLineSafe(line string) bool {
 			break
 		}
 
-		// fmt.Printf("%v and %v -> %v \n", sliceOfInts[i], sliceOfInts[i+1], result)
+		// fmt.Printf("%v and %v -> %v \n", input[i], input[i+1], result)
 	}
+
+	return result
+}
+
+// TODO
+// Функция проверяет является ли переданный слайс целых чисел безопасным
+// количество допустимых элементов для удаления указывается в параметре tolerance
+func isSafeWithException(input []int, tolerance int) bool {
+
+	var result bool
+
+	test := []int{1, 2, 3, 4, 5, 6}
+	temp := slices.Delete(test, 0, 1) // удаление элемента из слайса
+	fmt.Println(temp)
 
 	return result
 }
