@@ -9,18 +9,18 @@ import (
 )
 
 // ********* Advent of Code 2024 *********
-// --- Day 3: Mull It Over --- Puzzle 1
+// --- Day 3: Mull It Over --- Puzzle 2
 // https://adventofcode.com/2024/day/3
 
 func main() {
 
 	data := GetDataFromFileOneLine("data.txt")
 
-	answer := day3_1(data)
+	answer := day3_2(data)
 	fmt.Println(answer)
 }
 
-func day3_1(dataLine string) int {
+func day3_2(dataLine string) int {
 
 	var result int
 
@@ -40,8 +40,14 @@ func GetPairs(line string) [][]int {
 
 	var result [][]int
 
-	pattern := regexp.MustCompile(`mul\((\d{1,3}),(\d{1,3})\)`) // "mul(число,число)"
-	matches := pattern.FindAllStringSubmatch(line, -1)          // -1 означает "искать все вхождения"
+	pattern := regexp.MustCompile(`(don't\(\)).*?(do\(\))`) // "don't()*************do()"
+	line = pattern.ReplaceAllString(line, "")               // удаление всех вхождений из исходной строки
+
+	pattern = regexp.MustCompile(`(don't\(\)).*`) // "don't()************конец_строки"
+	line = pattern.ReplaceAllString(line, "")     // удаление непарного фрагмента, начинающегося с don't()******* если такой есть
+
+	pattern = regexp.MustCompile(`mul\((\d{1,3}),(\d{1,3})\)`) // "mul(число,число)"
+	matches := pattern.FindAllStringSubmatch(line, -1)
 
 	for _, v := range matches {
 
