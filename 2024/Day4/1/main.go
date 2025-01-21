@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // ********* Advent of Code 2024 *********
@@ -12,7 +13,7 @@ import (
 
 func main() {
 
-	data := GetMatrix("data2.txt")
+	data := GetMatrix("data.txt")
 	pattern := "XMAS"
 
 	answer := day4_1(data, pattern)
@@ -24,23 +25,25 @@ func day4_1(matrix [][]string, pattern string) int {
 	var result int
 	var allWays []string // все строки, столбцы, прямые и обратные диагонали из матрицы в виде строк
 
+	reversePattern := ReverseStr(pattern)
+
 	// добавить к набору все строки из матрицы
-	// allWays = append(allWays, GetLines(matrix)...)
+	allWays = append(allWays, GetLines(matrix)...)
 
 	// добавить к набору все столбцы из матрицы
-	// allWays = append(allWays, GetColumns(matrix)...)
+	allWays = append(allWays, GetColumns(matrix)...)
 
 	// добавить к набору все прямые диагонали из матрица
-	// allWays = append(allWays, GetForwardDiag(matrix)...)
+	allWays = append(allWays, GetForwardDiag(matrix)...)
 
 	// добавить к набору все обратные диагонали из матрицы
 	allWays = append(allWays, GetBackwardDiag(matrix)...)
 
 	// искать в каждом элемента набора pattern и перевернутый pattern
-	// strings.Count(elem, "XMAS"))
-	// strings.Count(elem, "SAMX"))
-
-	fmt.Println(allWays)
+	for _, v := range allWays {
+		result += strings.Count(v, pattern)
+		result += strings.Count(v, reversePattern)
+	}
 
 	return result
 }
@@ -192,6 +195,17 @@ func GetBackwardDiag(matrix [][]string) []string {
 		}
 
 		result = append(result, diagonal)
+	}
+
+	return result
+}
+
+// Функция возвращает перевернутую строку
+func ReverseStr(s string) string {
+	var result string
+
+	for _, v := range s {
+		result = string(v) + result
 	}
 
 	return result
