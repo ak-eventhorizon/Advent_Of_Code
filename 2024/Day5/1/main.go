@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -15,9 +16,6 @@ import (
 func main() {
 
 	rules, updates := GetData("data.txt")
-
-	fmt.Println(rules)
-	fmt.Println(updates)
 
 	answer := day5_1(rules, updates)
 	fmt.Println(answer)
@@ -36,13 +34,25 @@ func day5_1(rules [][]int, updates [][]int) (result int) {
 // Функция проверяет соответствует ли слайс s списку правил rules.
 func IsCorrect(s []int, rules [][]int) (result bool) {
 
-	// TODO
+	for _, rule := range rules {
+		left := slices.Index(s, rule[0])
+		right := slices.Index(s, rule[1])
+
+		if left >= 0 && right >= 0 { // обе части правила присутствуют в слайсе
+			if left < right {
+				result = true
+			} else {
+				result = false
+				break
+			}
+		}
+	}
 
 	return result
 }
 
 // Функция возвращает средний элемент слайса нечетной длины.
-// Если слайс четной длины - среднего элемента нет и функция вернет 0.
+// Если слайс четной длины - среднего элемента нет и функция возвращает 0.
 func GetMiddleNumber(s []int) (middleElement int) {
 
 	if len(s)%2 == 0 {
