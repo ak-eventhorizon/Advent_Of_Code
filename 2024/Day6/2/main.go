@@ -150,6 +150,7 @@ func day6_2(layout [][]string) (result int) {
 func TestObstacle(x int, y int) (result bool) {
 
 	// TODO
+
 	return result
 }
 
