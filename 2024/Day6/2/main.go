@@ -10,91 +10,131 @@ import (
 // --- Day 6: Guard Gallivant --- Puzzle 2
 // https://adventofcode.com/2024/day/6
 
-// Объект, который перемещается по полю
-type Unit struct {
-	x          int        // координата по оси X
-	y          int        // координата по оси Y
-	onTheField bool       // признак того, что объект находится на поле и не вышел за его пределы
-	direction  string     // направление следующего шага "^" | "v" | ">" | "<"
-	field      [][]string // поле, на котором располагается объект и препятствия
+// Объект - препятствие "O", которое можно разместить на поле
+type Obstacle struct {
+	x         int // координата по оси X
+	y         int // кооридната по оси Y
+	hitTop    int // если с одной стороны прошло более 1 столкновения - значит стражник ходит кругами
+	hitRight  int // если с одной стороны прошло более 1 столкновения - значит стражник ходит кругами
+	hitBottom int // если с одной стороны прошло более 1 столкновения - значит стражник ходит кругами
+	hitLeft   int // если с одной стороны прошло более 1 столкновения - значит стражник ходит кругами
 }
 
-// Сделать один шаг объекта по полю
-func (u *Unit) move() {
+// Объект - стражник "^|v|>|<", который перемещается по полю
+type Unit struct {
+	x          int    // координата по оси X
+	y          int    // координата по оси Y
+	onTheField bool   // признак того, что объект находится на поле и не вышел за его пределы
+	direction  string // направление следующего шага "^" | "v" | ">" | "<"
+}
+
+// Объект, представляющий собой игровое поле, его состояние и объекты, которые на нем находятся
+type Field struct {
+	state    [][]string // состояние игрового поля (матрица символов из файла)
+	unit     *Unit      // стражник, который перемещается по полю
+	obstacle *Obstacle  // препятствие, добавленное на игровое поле
+}
+
+// Сделать шаг объекта по полю
+func (f *Field) moveUnit() {
 
 	var nextX, nextY int // координаты следующей позиции юнита
 
-	fieldSizeX := len(u.field[0])
-	fieldSizeY := len(u.field)
+	fieldSizeX := len(f.state[0])
+	fieldSizeY := len(f.state)
 
-	switch u.direction {
+	switch f.unit.direction {
 	case "^":
-		nextX = u.x
-		nextY = u.y - 1
+		nextX = f.unit.x
+		nextY = f.unit.y - 1
 	case "v":
-		nextX = u.x
-		nextY = u.y + 1
+		nextX = f.unit.x
+		nextY = f.unit.y + 1
 	case "<":
-		nextX = u.x - 1
-		nextY = u.y
+		nextX = f.unit.x - 1
+		nextY = f.unit.y
 	case ">":
-		nextX = u.x + 1
-		nextY = u.y
+		nextX = f.unit.x + 1
+		nextY = f.unit.y
 	default:
-		nextX = u.x
-		nextY = u.y
+		nextX = f.unit.x
+		nextY = f.unit.y
 	}
 
 	// если шаг сделан за пределы поля
 	if ((nextX < 0) || (nextX >= fieldSizeX)) || ((nextY < 0) || (nextY >= fieldSizeY)) {
-		u.x = nextX
-		u.y = nextY
-		u.onTheField = false
+		f.unit.x = nextX
+		f.unit.y = nextY
+		f.unit.onTheField = false
 		return
 	}
 
-	// если шаг сделан в препятствие - изменить направление следующего шага на 90 градусов вправо
-	if u.field[nextY][nextX] == "#" || u.field[nextY][nextX] == "O" {
-		switch u.direction {
+	// если шаг сделан в препятствие "#" - изменить направление следующего шага на 90 градусов вправо
+	if f.state[nextY][nextX] == "#" {
+		switch f.unit.direction {
 		case "^":
-			u.direction = ">"
+			f.unit.direction = ">"
 		case ">":
-			u.direction = "v"
+			f.unit.direction = "v"
 		case "v":
-			u.direction = "<"
+			f.unit.direction = "<"
 		case "<":
-			u.direction = "^"
+			f.unit.direction = "^"
+		}
+		return
+	}
+
+	// если шаг сделан в препятствие "O" - изменить направление следующего шага на 90 градусов вправо и увеличить счетчик столкновений с препятствием
+	if f.state[nextY][nextX] == "O" {
+		switch f.unit.direction {
+		case "^":
+			f.unit.direction = ">"
+			f.obstacle.hitBottom++
+		case ">":
+			f.unit.direction = "v"
+			f.obstacle.hitLeft++
+		case "v":
+			f.unit.direction = "<"
+			f.obstacle.hitTop++
+		case "<":
+			f.unit.direction = "^"
+			f.obstacle.hitRight++
 		}
 		return
 	}
 
 	// сделать следующий шаг
-	if u.onTheField {
-		u.x = nextX
-		u.y = nextY
-		u.field[u.y][u.x] = u.direction
+	if f.unit.onTheField {
+		f.unit.x = nextX
+		f.unit.y = nextY
+		f.state[nextY][nextX] = f.unit.direction
 		return
 	}
 }
 
+// Установить на поле препятствие "O" в координаты x, y. Если препятствие было установлено ранее - оно будет заменено.
+func (f *Field) setObstacle(x, y int) {
+
+	// Если клетка на поле свободна
+	if f.state[y][x] == "." {
+
+		// Убрать ранее установленное препятствие, если оно было
+		if f.obstacle != nil {
+			f.state[f.obstacle.y][f.obstacle.x] = "."
+			f.obstacle = nil
+		}
+
+		f.state[y][x] = "O"
+		f.obstacle = new(Obstacle)
+		f.obstacle.x = x
+		f.obstacle.y = y
+	}
+}
+
 // Вывод статуса юнита
-func (u Unit) status() {
-	fmt.Println("Pos:", u.x, u.y, "Dir:", u.direction)
-}
-
-// Объект - препятствие "O", которое можно разместить на поле
-type Obstacle struct {
-	x    int        // координата по оси X
-	y    int        // кооридната по оси Y
-	hits HitCounter // если с одной стороны прошло более 1 столкновения - значит стражник ходит кругами
-}
-
-// Cчетчик столкновений со сторонами препятствия
-type HitCounter struct {
-	top    int
-	bottom int
-	left   int
-	right  int
+func (f *Field) status() {
+	fmt.Println("Unit:", f.unit.x, f.unit.y, "Direction:", f.unit.direction)
+	fmt.Println("Obstacle:", f.obstacle.x, f.obstacle.y)
 }
 
 func main() {
@@ -111,6 +151,10 @@ func day6_2(layout [][]string) (result int) {
 	// представляется достаточным сделать ограничение количества равным площади поля
 	moveLimit := len(layout[0]) * len(layout)
 
+	// инициализация нового игрового поля
+	field := new(Field)
+	field.state = layout
+
 	// находжение на поле стражника и инициализация соответствующего объекта
 	guardian := new(Unit)
 	for y, line := range layout {
@@ -120,7 +164,6 @@ func day6_2(layout [][]string) (result int) {
 				guardian.y = y
 				guardian.direction = char
 				guardian.onTheField = true
-				guardian.field = layout
 				break // прерывание цикла поиска - подразумеваем, что стражник на поле один
 			}
 		}
@@ -130,26 +173,54 @@ func day6_2(layout [][]string) (result int) {
 		panic("No units on the field")
 	}
 
+	field.unit = guardian
+
 	// запуск движения по полю
-	for i := 0; i < moveLimit; i++ {
-		if guardian.onTheField == false {
+	for range moveLimit {
+		if field.unit.onTheField == false {
 			break // прервать движение, если объект вышел за пределы поля
 		}
-		// guardian.status() // отчет о каждом шаге для отладки
-		guardian.move()
+		// field.status() // отчет о каждом шаге для отладки
+		field.moveUnit()
 	}
 
-	result = CalcVisited(layout)
-	SaveData(layout, "output.txt")
+	result = CalcVisited(field.state)
+	SaveData(field.state, "output.txt")
 
 	return result
 }
 
-// Функция устанавливает препятствие в указанные координаты и проверяет создает ли оно петлю длижения стражника
-// true - препятсвие зацикливает стражника, false - препятствие не зацикливает стражника
-func TestObstacle(x int, y int) (result bool) {
+// Функция устанавливает препятствие в указанные координаты и проверяет создает ли оно петлю движения стражника
+// true - препятствие зацикливает стражника, false - препятствие не зацикливает стражника
+func isObstacleUseful(f Field, x int, y int) (result bool) {
 
-	// TODO
+	// ограничение на количество ходов, для исключения бесконечного хождения по кругу внутри поля
+	// представляется достаточным сделать ограничение количества равным площади поля
+	moveLimit := len(f.state[0]) * len(f.state)
+
+	// TODO -- ПЕРЕПИСАТЬ day6_2
+	f.setObstacle(x, y)
+	for i := range moveLimit {
+
+		f.moveUnit()
+
+		// прерываем цикл, если стражник вышел с поля
+		if f.unit.onTheField == false {
+			result = false
+			break
+		}
+
+		// прерываем цикл, если стражник ходит по кругу, созданному нашим препятствием
+		if f.obstacle.hitBottom > 1 || f.obstacle.hitLeft > 1 || f.obstacle.hitRight > 1 || f.obstacle.hitTop > 1 {
+			result = true
+			break
+		}
+
+		// если достигнут лимит - значит стражник ходит кругами по исходному полю
+		if i == moveLimit {
+			panic("Infinite Guardian loop on current Field")
+		}
+	}
 
 	return result
 }
@@ -209,6 +280,7 @@ func SaveData(layout [][]string, filename string) {
 		}
 		file.WriteString(s)
 
+		// для каждой строки, кроме последней допечатываем перевод строки
 		if i != len(layout)-1 {
 			file.WriteString("\n")
 		}
