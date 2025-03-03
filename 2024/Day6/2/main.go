@@ -147,11 +147,13 @@ func main() {
 
 func day6_2(layout [][]string) (result int) {
 
-	// ограничение на количество ходов, для исключения бесконечного хождения по кругу внутри поля
-	// представляется достаточным сделать ограничение количества равным площади поля
-	moveLimit := len(layout[0]) * len(layout)
+	// копия исходного игрового поля для сохранения на нем всех подходящих препятствий
+	fieldWithResults := new(Field)
+	fieldWithResults.state = layout
 
-	// инициализация нового игрового поля
+	// ТУТ НАЧАТЬ ЦИКЛ
+
+	// инициализазия игрового поля для анализа вариантов размещения препятствий
 	field := new(Field)
 	field.state = layout
 
@@ -164,42 +166,43 @@ func day6_2(layout [][]string) (result int) {
 				guardian.y = y
 				guardian.direction = char
 				guardian.onTheField = true
-				break // прерывание цикла поиска - подразумеваем, что стражник на поле один
+				break // прерывание цикла поиска - подразумеваем, что стражник на поле только один
 			}
 		}
 	}
 
 	if guardian.onTheField == false {
-		panic("No units on the field")
+		panic("No units on the field!")
+	} else {
+		field.unit = guardian
 	}
 
-	field.unit = guardian
-
-	// запуск движения по полю
-	for range moveLimit {
-		if field.unit.onTheField == false {
-			break // прервать движение, если объект вышел за пределы поля
-		}
-		// field.status() // отчет о каждом шаге для отладки
-		field.moveUnit()
+	field.setObstacle(3, 6)
+	if isObstacleUseful(*field) { // вот тут меняется не только field, но и fieldWithResults
+		fieldWithResults.state[6][3] = "O"
 	}
 
-	result = CalcVisited(field.state)
-	SaveData(field.state, "output.txt")
+	fmt.Println(field)
+	fmt.Println(fieldWithResults)
+
+	// ТУТ ЗАКАНЧИВАТЬ ЦИКЛ
+
+	result = CalcObstacles(fieldWithResults.state)
+	SaveData(fieldWithResults.state, "output.txt")
 
 	return result
 }
 
 // Функция устанавливает препятствие в указанные координаты и проверяет создает ли оно петлю движения стражника
 // true - препятствие зацикливает стражника, false - препятствие не зацикливает стражника
-func isObstacleUseful(f Field, x int, y int) (result bool) {
+func isObstacleUseful(f Field) (result bool) {
 
 	// ограничение на количество ходов, для исключения бесконечного хождения по кругу внутри поля
 	// представляется достаточным сделать ограничение количества равным площади поля
-	moveLimit := len(f.state[0]) * len(f.state)
+	moveLimit := len(f.state[0]) * len(f.state) // тут вероятно нужно больше?
 
-	// TODO -- ПЕРЕПИСАТЬ day6_2
-	f.setObstacle(x, y)
+	// f.setObstacle(x, y)
+
 	for i := range moveLimit {
 
 		f.moveUnit()
@@ -225,18 +228,18 @@ func isObstacleUseful(f Field, x int, y int) (result bool) {
 	return result
 }
 
-// Функция на основании состояния поля layout вычисляет количество посещенных клеток.
-func CalcVisited(layout [][]string) (visited int) {
+// Функция вычисляет количество препятствий "O" на поле.
+func CalcObstacles(layout [][]string) (count int) {
 
 	for _, line := range layout {
 		for _, char := range line {
-			if char == "^" || char == ">" || char == "v" || char == "<" {
-				visited++
+			if char == "O" {
+				count++
 			}
 		}
 	}
 
-	return visited
+	return count
 }
 
 // Функция извлекает из текстового файла карту задачи.
