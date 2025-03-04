@@ -16,10 +16,10 @@ type Field struct {
 	state [][]string // состояние игрового поля (матрица символов из файла)
 
 	unit struct { // Стражник "^|v|>|<", который перемещается по полю
-		x          int    // координата по оси X
-		y          int    // координата по оси Y
-		direction  string // направление следующего шага "^" | "v" | ">" | "<"
-		onTheField bool   // признак того, что объект находится на поле и не вышел за его пределы
+		x            int    // координата по оси X
+		y            int    // координата по оси Y
+		direction    string // направление следующего шага "^" | "v" | ">" | "<"
+		isOnTheField bool   // признак того, что объект находится на поле и не вышел за его пределы
 	}
 
 	obstacle struct { // Препятствие "O", которое можно разместить на поле
@@ -29,7 +29,7 @@ type Field struct {
 		hitRight  int  // если с одной стороны было более 1 столкновения - значит стражник ходит кругами
 		hitBottom int  // если с одной стороны было более 1 столкновения - значит стражник ходит кругами
 		hitLeft   int  // если с одной стороны было более 1 столкновения - значит стражник ходит кругами
-		isSet     bool // признак, что препятсвие было установлено на поле
+		isSet     bool // признак, что препятствие было установлено на поле
 	}
 }
 
@@ -51,13 +51,13 @@ func (f *Field) fillFrom(layout [][]string) {
 				f.unit.x = x
 				f.unit.y = y
 				f.unit.direction = char
-				f.unit.onTheField = true
-				break // прерывание цикла поиска - подразумеваем, что стражник на поле только один
+				f.unit.isOnTheField = true
+				break // прерывание цикла поиска - подразумевается, что стражник на поле только один
 			}
 		}
 	}
 
-	if f.unit.onTheField == false {
+	if f.unit.isOnTheField == false {
 		panic("No units on the field!")
 	}
 }
@@ -92,7 +92,7 @@ func (f *Field) moveUnit() {
 	if ((nextX < 0) || (nextX >= fieldSizeX)) || ((nextY < 0) || (nextY >= fieldSizeY)) {
 		f.unit.x = nextX
 		f.unit.y = nextY
-		f.unit.onTheField = false
+		f.unit.isOnTheField = false
 		return
 	}
 
@@ -131,7 +131,7 @@ func (f *Field) moveUnit() {
 	}
 
 	// сделать следующий шаг
-	if f.unit.onTheField {
+	if f.unit.isOnTheField {
 		f.unit.x = nextX
 		f.unit.y = nextY
 		f.state[nextY][nextX] = f.unit.direction
@@ -159,7 +159,6 @@ func (f *Field) setObstacle(x, y int) {
 		f.obstacle.hitLeft = 0
 		f.obstacle.hitRight = 0
 		f.obstacle.hitTop = 0
-
 	}
 }
 
@@ -174,8 +173,8 @@ func main() {
 func day6_2(layout [][]string) (result int) {
 
 	// копия исходного игрового поля для сохранения на нем всех подходящих препятствий
-	fieldWithResults := new(Field)
-	fieldWithResults.fillFrom(layout)
+	fieldWithUsefulObstacles := new(Field)
+	fieldWithUsefulObstacles.fillFrom(layout)
 
 	for y, line := range layout {
 		for x := range line {
@@ -186,13 +185,13 @@ func day6_2(layout [][]string) (result int) {
 
 			field.setObstacle(x, y)
 			if isObstacleUseful(field) {
-				fieldWithResults.state[y][x] = "O"
+				fieldWithUsefulObstacles.state[y][x] = "O"
 			}
 		}
 	}
 
-	result = CalcObstacles(fieldWithResults.state)
-	SaveData(fieldWithResults.state, "output.txt")
+	result = CalcObstacles(fieldWithUsefulObstacles.state)
+	SaveData(fieldWithUsefulObstacles.state, "output.txt")
 
 	return result
 }
@@ -210,7 +209,7 @@ func isObstacleUseful(f *Field) (result bool) {
 		f.moveUnit()
 
 		// прерываем цикл, если стражник вышел с поля
-		if f.unit.onTheField == false {
+		if f.unit.isOnTheField == false {
 			result = false
 			break
 		}
