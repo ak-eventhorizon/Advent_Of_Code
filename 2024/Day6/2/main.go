@@ -4,35 +4,62 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 )
 
 // ********* Advent of Code 2024 *********
 // --- Day 6: Guard Gallivant --- Puzzle 2
 // https://adventofcode.com/2024/day/6
 
-// Объект - препятствие "O", которое можно разместить на поле
-type Obstacle struct {
-	x         int // координата по оси X
-	y         int // кооридната по оси Y
-	hitTop    int // если с одной стороны прошло более 1 столкновения - значит стражник ходит кругами
-	hitRight  int // если с одной стороны прошло более 1 столкновения - значит стражник ходит кругами
-	hitBottom int // если с одной стороны прошло более 1 столкновения - значит стражник ходит кругами
-	hitLeft   int // если с одной стороны прошло более 1 столкновения - значит стражник ходит кругами
-}
-
-// Объект - стражник "^|v|>|<", который перемещается по полю
-type Unit struct {
-	x          int    // координата по оси X
-	y          int    // координата по оси Y
-	onTheField bool   // признак того, что объект находится на поле и не вышел за его пределы
-	direction  string // направление следующего шага "^" | "v" | ">" | "<"
-}
-
 // Объект, представляющий собой игровое поле, его состояние и объекты, которые на нем находятся
 type Field struct {
-	state    [][]string // состояние игрового поля (матрица символов из файла)
-	unit     *Unit      // стражник, который перемещается по полю
-	obstacle *Obstacle  // препятствие, добавленное на игровое поле
+	state [][]string // состояние игрового поля (матрица символов из файла)
+
+	unit struct { // Стражник "^|v|>|<", который перемещается по полю
+		x          int    // координата по оси X
+		y          int    // координата по оси Y
+		direction  string // направление следующего шага "^" | "v" | ">" | "<"
+		onTheField bool   // признак того, что объект находится на поле и не вышел за его пределы
+	}
+
+	obstacle struct { // Препятствие "O", которое можно разместить на поле
+		x         int  // координата по оси X
+		y         int  // кооридната по оси Y
+		hitTop    int  // если с одной стороны было более 1 столкновения - значит стражник ходит кругами
+		hitRight  int  // если с одной стороны было более 1 столкновения - значит стражник ходит кругами
+		hitBottom int  // если с одной стороны было более 1 столкновения - значит стражник ходит кругами
+		hitLeft   int  // если с одной стороны было более 1 столкновения - значит стражник ходит кругами
+		isSet     bool // признак, что препятсвие было установлено на поле
+	}
+}
+
+// Заполнить структуру из содержимого поля layout
+func (f *Field) fillFrom(layout [][]string) {
+
+	// заполнение матрицы state клонированием каждого элемента, поскольку иначе слайсы передаются по ссылке и везде используется один и тот же фактический слайс
+	var tmpMatrix [][]string
+	for _, v := range layout {
+		tmpMatrix = append(tmpMatrix, slices.Clone(v))
+	}
+
+	f.state = tmpMatrix
+
+	// находжение на поле стражника и установка его координат и направления
+	for y, line := range layout {
+		for x, char := range line {
+			if char == "^" || char == ">" || char == "v" || char == "<" {
+				f.unit.x = x
+				f.unit.y = y
+				f.unit.direction = char
+				f.unit.onTheField = true
+				break // прерывание цикла поиска - подразумеваем, что стражник на поле только один
+			}
+		}
+	}
+
+	if f.unit.onTheField == false {
+		panic("No units on the field!")
+	}
 }
 
 // Сделать шаг объекта по полю
@@ -119,22 +146,21 @@ func (f *Field) setObstacle(x, y int) {
 	if f.state[y][x] == "." {
 
 		// Убрать ранее установленное препятствие, если оно было
-		if f.obstacle != nil {
+		if f.obstacle.isSet {
 			f.state[f.obstacle.y][f.obstacle.x] = "."
-			f.obstacle = nil
+			f.obstacle.isSet = false
 		}
 
 		f.state[y][x] = "O"
-		f.obstacle = new(Obstacle)
+		f.obstacle.isSet = true
 		f.obstacle.x = x
 		f.obstacle.y = y
-	}
-}
+		f.obstacle.hitBottom = 0
+		f.obstacle.hitLeft = 0
+		f.obstacle.hitRight = 0
+		f.obstacle.hitTop = 0
 
-// Вывод статуса юнита
-func (f *Field) status() {
-	fmt.Println("Unit:", f.unit.x, f.unit.y, "Direction:", f.unit.direction)
-	fmt.Println("Obstacle:", f.obstacle.x, f.obstacle.y)
+	}
 }
 
 func main() {
@@ -149,43 +175,21 @@ func day6_2(layout [][]string) (result int) {
 
 	// копия исходного игрового поля для сохранения на нем всех подходящих препятствий
 	fieldWithResults := new(Field)
-	fieldWithResults.state = layout
+	fieldWithResults.fillFrom(layout)
 
-	// ТУТ НАЧАТЬ ЦИКЛ
-
-	// инициализазия игрового поля для анализа вариантов размещения препятствий
-	field := new(Field)
-	field.state = layout
-
-	// находжение на поле стражника и инициализация соответствующего объекта
-	guardian := new(Unit)
 	for y, line := range layout {
-		for x, char := range line {
-			if char == "^" || char == ">" || char == "v" || char == "<" {
-				guardian.x = x
-				guardian.y = y
-				guardian.direction = char
-				guardian.onTheField = true
-				break // прерывание цикла поиска - подразумеваем, что стражник на поле только один
+		for x := range line {
+
+			// экземпляр поля, на которое будем устанавливать препятствие и проверять его
+			field := new(Field)
+			field.fillFrom(layout)
+
+			field.setObstacle(x, y)
+			if isObstacleUseful(field) {
+				fieldWithResults.state[y][x] = "O"
 			}
 		}
 	}
-
-	if guardian.onTheField == false {
-		panic("No units on the field!")
-	} else {
-		field.unit = guardian
-	}
-
-	field.setObstacle(3, 6)
-	if isObstacleUseful(*field) { // вот тут меняется не только field, но и fieldWithResults
-		fieldWithResults.state[6][3] = "O"
-	}
-
-	fmt.Println(field)
-	fmt.Println(fieldWithResults)
-
-	// ТУТ ЗАКАНЧИВАТЬ ЦИКЛ
 
 	result = CalcObstacles(fieldWithResults.state)
 	SaveData(fieldWithResults.state, "output.txt")
@@ -195,13 +199,11 @@ func day6_2(layout [][]string) (result int) {
 
 // Функция устанавливает препятствие в указанные координаты и проверяет создает ли оно петлю движения стражника
 // true - препятствие зацикливает стражника, false - препятствие не зацикливает стражника
-func isObstacleUseful(f Field) (result bool) {
+func isObstacleUseful(f *Field) (result bool) {
 
 	// ограничение на количество ходов, для исключения бесконечного хождения по кругу внутри поля
 	// представляется достаточным сделать ограничение количества равным площади поля
 	moveLimit := len(f.state[0]) * len(f.state) // тут вероятно нужно больше?
-
-	// f.setObstacle(x, y)
 
 	for i := range moveLimit {
 
@@ -221,7 +223,7 @@ func isObstacleUseful(f Field) (result bool) {
 
 		// если достигнут лимит - значит стражник ходит кругами по исходному полю
 		if i == moveLimit {
-			panic("Infinite Guardian loop on current Field")
+			panic("Infinite Guardian loop on initial Field")
 		}
 	}
 
