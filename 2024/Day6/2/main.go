@@ -176,22 +176,58 @@ func day6_2(layout [][]string) (result int) {
 	fieldWithUsefulObstacles := new(Field)
 	fieldWithUsefulObstacles.fillFrom(layout)
 
-	for y, line := range layout {
-		for x := range line {
+	// копия исходного поля для вычисления маршрута стражника без стороннего вмешательства
+	tmpField := new(Field)
+	tmpField.fillFrom(layout)
 
-			// экземпляр поля, на которое будем устанавливать препятствие и проверять его
-			field := new(Field)
-			field.fillFrom(layout)
+	route := getDefaultRoute(tmpField)
 
-			field.setObstacle(x, y)
-			if isObstacleUseful(field) {
-				fieldWithUsefulObstacles.state[y][x] = "O"
-			}
+	// поочередно ставим препятствие на каждую точку исходного маршрута стражника и проверяем помогло-ли
+	for _, point := range route {
+		// экземпляр поля, на которое будем устанавливать препятствие и проверять его
+		field := new(Field)
+		field.fillFrom(layout)
+
+		field.setObstacle(point[0], point[1])
+		if isObstacleUseful(field) {
+			fieldWithUsefulObstacles.state[point[1]][point[0]] = "O"
 		}
 	}
 
 	result = CalcObstacles(fieldWithUsefulObstacles.state)
 	SaveData(fieldWithUsefulObstacles.state, "output.txt")
+
+	return result
+}
+
+// Функция возвращает набор координат, описывающих все шаги стражника до выхода с поля начальной конфигурации [x,y]
+func getDefaultRoute(f *Field) (result [][]int) {
+
+	// ограничение на количество ходов, для исключения бесконечного хождения по кругу внутри поля
+	// представляется достаточным сделать ограничение количества равным площади поля
+	moveLimit := len(f.state[0]) * len(f.state)
+
+	for i := range moveLimit {
+
+		point := make([]int, 2)
+
+		f.moveUnit()
+
+		// прерываем цикл, если стражник вышел с поля
+		if f.unit.isOnTheField == false {
+			break
+		} else {
+			point[0] = f.unit.x
+			point[1] = f.unit.y
+		}
+
+		// если достигнут лимит - значит стражник ходит кругами по исходному полю
+		if i == moveLimit-1 {
+			panic("Infinite Guardian loop on initial Field")
+		}
+
+		result = append(result, point)
+	}
 
 	return result
 }
@@ -202,11 +238,12 @@ func isObstacleUseful(f *Field) (result bool) {
 
 	// ограничение на количество ходов, для исключения бесконечного хождения по кругу внутри поля
 	// представляется достаточным сделать ограничение количества равным площади поля
-	moveLimit := len(f.state[0]) * len(f.state) // тут вероятно нужно больше?
+	moveLimit := len(f.state[0]) * len(f.state)
 
-	for i := range moveLimit {
+	for {
 
 		f.moveUnit()
+		moveLimit--
 
 		// прерываем цикл, если стражник вышел с поля
 		if f.unit.isOnTheField == false {
@@ -214,15 +251,16 @@ func isObstacleUseful(f *Field) (result bool) {
 			break
 		}
 
-		// прерываем цикл, если стражник ходит по кругу, созданному нашим препятствием
+		// прерываем цикл, если стражник ходит по кругу, в котором циклически участвует наше препятствие
 		if f.obstacle.hitBottom > 1 || f.obstacle.hitLeft > 1 || f.obstacle.hitRight > 1 || f.obstacle.hitTop > 1 {
 			result = true
 			break
 		}
 
-		// если достигнут лимит - значит стражник ходит кругами по исходному полю
-		if i == moveLimit {
-			panic("Infinite Guardian loop on initial Field")
+		// если достигнут лимит - значит стражник ходит по кругу, в котором циклически не участвует наше препятствие
+		if moveLimit == 0 {
+			result = true
+			break
 		}
 	}
 
