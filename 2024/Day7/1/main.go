@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -28,31 +27,37 @@ func main() {
 
 func day7_1(cases []Case) (result int) {
 
-	for _, v := range cases {
-		fmt.Println(v.value, v.numbers)
-	}
+	// for _, v := range cases {
+	// 	fmt.Println(v.value, v.numbers)
+	// }
 
-	fmt.Println(GetCombinations([]string{"A", "B"}, 3))
+	GetAllCombinations([]string{"A", "B"}, 3)
 
 	return result
 }
 
-// Функция возвращает все комбинации строк длиной n, которые можно составить из символов symbols
-func GetCombinations(symbols []string, n int) (list []string) {
+// Функция возвращает все комбинации длиной k, которые можно составить из набора символов set
+func GetAllCombinations(set []string, k int) (list []string) {
+	n := len(set)
+	printCombinationRec(set, "", n, k)
 
-	combinations := math.Pow(float64(len(symbols)), float64(n)) // количество комбинаций = количество_символов**n
-	list = make([]string, int(combinations))
-
-	for i := 0; i < int(combinations); i++ {
-
-	}
-
-	for i := 0; i < n; i++ {
-		for _, symbol := range symbols {
-			list[i] += symbol
-		}
-	}
 	return list
+}
+
+func printCombinationRec(set []string, prefix string, n int, k int) {
+
+	// базовый случай - возвращает префикс
+	if k == 0 {
+		fmt.Println(prefix)
+		return
+	}
+
+	for i := range n {
+		newPrefix := prefix + set[i]
+		printCombinationRec(set, newPrefix, n, k-1)
+
+	}
+
 }
 
 // Функция извлекает из текстового файла все условия задачи.
