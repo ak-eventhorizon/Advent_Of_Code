@@ -27,37 +27,56 @@ func main() {
 
 func day7_1(cases []Case) (result int) {
 
-	// for _, v := range cases {
-	// 	fmt.Println(v.value, v.numbers)
-	// }
+	for _, c := range cases {
 
-	GetAllCombinations([]string{"A", "B"}, 3)
+		allCombinations := GetAllCombinations([]string{"+", "*"}, len(c.numbers)-1)
+
+		fmt.Print("For case ", c, " ---> ")
+		fmt.Println("Combinations:", allCombinations)
+
+		for _, combination := range allCombinations {
+			expression := ""
+			for i := 0; i < len(c.numbers); i++ {
+				if i == len(c.numbers)-1 {
+					expression += strconv.Itoa(c.numbers[i])
+				} else {
+					expression += strconv.Itoa(c.numbers[i]) + string(rune(combination[i]))
+				}
+			}
+			fmt.Println("    ", expression)
+		}
+	}
+
+	//TODO
 
 	return result
 }
 
-// Функция возвращает все комбинации длиной k, которые можно составить из набора символов set
+// Функция возвращает все комбинации длиной k, которые можно составить из набора символов set;
+// Для set = ["A", "B"], k = 3;
+// [AAA AAB ABA ABB BAA BAB BBA BBB]
 func GetAllCombinations(set []string, k int) (list []string) {
 	n := len(set)
-	printCombinationRec(set, "", n, k)
+	list = GetAllCombinationsRec(set, "", n, k)
 
 	return list
 }
 
-func printCombinationRec(set []string, prefix string, n int, k int) {
+// Рекурсия для получения всех комбинаций
+func GetAllCombinationsRec(set []string, prefix string, n int, k int) (res []string) {
 
-	// базовый случай - возвращает префикс
+	// базовый случай - выход из рекурсии
 	if k == 0 {
-		fmt.Println(prefix)
-		return
+		return []string{prefix}
 	}
 
+	// один за одним добавляем все символы из набора и рекурсивно вызываем для длины k-1
 	for i := range n {
 		newPrefix := prefix + set[i]
-		printCombinationRec(set, newPrefix, n, k-1)
-
+		res = append(res, GetAllCombinationsRec(set, newPrefix, n, k-1)...)
 	}
 
+	return res
 }
 
 // Функция извлекает из текстового файла все условия задачи.
