@@ -35,21 +35,106 @@ func day7_1(cases []Case) (result int) {
 		fmt.Println("Combinations:", allCombinations)
 
 		for _, combination := range allCombinations {
-			expression := ""
+			expression := []string{}
 			for i := 0; i < len(c.numbers); i++ {
 				if i == len(c.numbers)-1 {
-					expression += strconv.Itoa(c.numbers[i])
+					expression = append(expression, strconv.Itoa(c.numbers[i]))
 				} else {
-					expression += strconv.Itoa(c.numbers[i]) + string(rune(combination[i]))
+					expression = append(expression, strconv.Itoa(c.numbers[i]), string(rune(combination[i])))
 				}
 			}
-			fmt.Println("    ", expression)
+			fmt.Print(expression)
+			fmt.Println("--->", calcExpression(expression))
 		}
 	}
 
-	//TODO
+	// fmt.Println(calcExpression2([]string{"2", "+", "2", "*", "2"}))
+	// fmt.Println(calcExpression2([]string{"2", "*", "2", "*", "3"}))
+	// fmt.Println(calcExpression2([]string{"2", "+", "2", "+", "3"}))
 
 	return result
+}
+
+// Функция вычисляет выражение expr, переданное слайсом строк
+// Не является полноценным парсером выражений, это ограниченный прототип только для условий задачи
+// Колхоз, но нет порыва писать AST...
+func calcExpression(expr []string) (res int) {
+
+	addition := []int{}
+	multiplication := []int{}
+
+	//TODO
+	// Делим по символу "+" 11*6+16*20*22+5+6 ---> 11*6   16*20*22   5   6
+	// Перемножаем каждый
+	// Складываем все вместе
+
+	// извлекаем перемножаемые числа, извлеченные значения наменяются на ""
+	for i := 0; i < len(expr); i++ {
+
+		if expr[i] == "*" {
+
+			val1, err := strconv.Atoi(expr[i+1])
+			if err != nil {
+				val1 = 1
+			}
+
+			val2, err := strconv.Atoi(expr[i-1])
+			if err != nil {
+				val2 = 1
+			}
+
+			multiplication = append(multiplication, val1, val2)
+
+			expr[i-1] = ""
+			expr[i] = ""
+			expr[i+1] = ""
+		}
+	}
+
+	// извлекаем слагаемые числа
+	for i := 0; i < len(expr); i++ {
+
+		if expr[i] == "+" {
+
+			val1, err := strconv.Atoi(expr[i+1])
+			if err != nil {
+				val1 = 0
+			}
+
+			val2, err := strconv.Atoi(expr[i-1])
+			if err != nil {
+				val2 = 0
+			}
+
+			addition = append(addition, val1, val2)
+
+			expr[i-1] = ""
+			expr[i] = ""
+			expr[i+1] = ""
+		}
+	}
+
+	var mul int
+
+	if len(multiplication) == 0 {
+		mul = 0
+	} else {
+		mul = 1
+		for _, v := range multiplication {
+			mul *= v
+		}
+	}
+
+	// fmt.Println(expr, " MULT>>>>>>>>>>>>>>", multiplication)
+	// fmt.Println(expr, " ADD>>>>>>>>>>>>>>", addition)
+
+	for _, v := range addition {
+		res += v
+	}
+
+	res += mul
+
+	return res
 }
 
 // Функция возвращает все комбинации длиной k, которые можно составить из набора символов set;
