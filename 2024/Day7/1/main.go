@@ -63,7 +63,7 @@ func calcExpression(expr []string) (res int) {
 	addition := []int{}
 	multiplication := []int{}
 
-	//TODO
+	//TODO <<<
 	// Делим по символу "+" 11*6+16*20*22+5+6 ---> 11*6   16*20*22   5   6
 	// Перемножаем каждый
 	// Складываем все вместе
