@@ -60,79 +60,35 @@ func day7_1(cases []Case) (result int) {
 // Колхоз, но нет порыва писать AST...
 func calcExpression(expr []string) (res int) {
 
-	addition := []int{}
-	multiplication := []int{}
+	// ЭТОТ КОД РАБОТАЕТ С УЧЕТОМ ПРЕИМУЩЕСТВА ОПЕРАЦИИ УМНОЖЕНИЯ ПЕРЕД СЛОЖЕНИЕМ - сначала все умножение, затем все сложение
+	// Делим по символу "+" 11*6+16*20*22+5+6 ---> (11*6)+(16*20*22)+(5)+(6)
 
-	//TODO <<<
-	// Делим по символу "+" 11*6+16*20*22+5+6 ---> 11*6   16*20*22   5   6
-	// Перемножаем каждый
-	// Складываем все вместе
+	addition := []int{} // слагаемые
 
-	// извлекаем перемножаемые числа, извлеченные значения наменяются на ""
-	for i := 0; i < len(expr); i++ {
+	strExpr := strings.Join(expr, "")
+	mulParts := strings.Split(strExpr, "+")
 
-		if expr[i] == "*" {
+	for _, v := range mulParts {
+		nums := strings.Split(v, "*")
+		mul := 1
 
-			val1, err := strconv.Atoi(expr[i+1])
+		for _, v := range nums {
+			num, err := strconv.Atoi(v)
 			if err != nil {
-				val1 = 1
+				panic("Non numeric value!")
 			}
-
-			val2, err := strconv.Atoi(expr[i-1])
-			if err != nil {
-				val2 = 1
-			}
-
-			multiplication = append(multiplication, val1, val2)
-
-			expr[i-1] = ""
-			expr[i] = ""
-			expr[i+1] = ""
+			mul *= num
 		}
+
+		addition = append(addition, mul)
 	}
-
-	// извлекаем слагаемые числа
-	for i := 0; i < len(expr); i++ {
-
-		if expr[i] == "+" {
-
-			val1, err := strconv.Atoi(expr[i+1])
-			if err != nil {
-				val1 = 0
-			}
-
-			val2, err := strconv.Atoi(expr[i-1])
-			if err != nil {
-				val2 = 0
-			}
-
-			addition = append(addition, val1, val2)
-
-			expr[i-1] = ""
-			expr[i] = ""
-			expr[i+1] = ""
-		}
-	}
-
-	var mul int
-
-	if len(multiplication) == 0 {
-		mul = 0
-	} else {
-		mul = 1
-		for _, v := range multiplication {
-			mul *= v
-		}
-	}
-
-	// fmt.Println(expr, " MULT>>>>>>>>>>>>>>", multiplication)
-	// fmt.Println(expr, " ADD>>>>>>>>>>>>>>", addition)
 
 	for _, v := range addition {
 		res += v
 	}
 
-	res += mul
+	//TODO
+	// ЭТОТ КОД ДОЛЖЕН РАБОТАТЬ БЕЗ УЧЕТА ПРЕИМУЩЕСТВА ОПЕРАЦИИ УМНОЖЕНИЯ ПЕРЕД СЛОЖЕНИЕМ - просто слева направо
 
 	return res
 }
