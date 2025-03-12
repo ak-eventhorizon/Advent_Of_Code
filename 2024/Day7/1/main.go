@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -29,66 +30,100 @@ func day7_1(cases []Case) (result int) {
 
 	for _, c := range cases {
 
-		allCombinations := GetAllCombinations([]string{"+", "*"}, len(c.numbers)-1)
+		operatorsCombinations := GetAllCombinations([]string{"+", "*"}, len(c.numbers)-1)
 
-		fmt.Print("For case ", c, " ---> ")
-		fmt.Println("Combinations:", allCombinations)
+		// fmt.Print("For case ", c, " ---> ")                 // DEBUG print
+		// fmt.Println("Combinations:", operatorsCombinations) // DEBUG print
 
-		for _, combination := range allCombinations {
+		for _, operators := range operatorsCombinations {
 			expression := []string{}
 			for i := 0; i < len(c.numbers); i++ {
-				if i == len(c.numbers)-1 {
+				if i == len(c.numbers)-1 { // последний элемент выражения
 					expression = append(expression, strconv.Itoa(c.numbers[i]))
 				} else {
-					expression = append(expression, strconv.Itoa(c.numbers[i]), string(rune(combination[i])))
+					expression = append(expression, strconv.Itoa(c.numbers[i]), string(operators[i]))
 				}
 			}
-			fmt.Print(expression)
-			fmt.Println("--->", calcExpression(expression))
+
+			exprResult := calcExpression(expression)
+
+			// fmt.Print(expression)               // DEBUG print
+			// fmt.Print("--------> ", exprResult) // DEBUG print
+
+			if c.value == exprResult {
+				// fmt.Println(" <---- BINGO!!!") // DEBUG print
+				result += exprResult
+				break
+			} else {
+				// fmt.Println("") // DEBUG print
+			}
 		}
 	}
-
-	// fmt.Println(calcExpression2([]string{"2", "+", "2", "*", "2"}))
-	// fmt.Println(calcExpression2([]string{"2", "*", "2", "*", "3"}))
-	// fmt.Println(calcExpression2([]string{"2", "+", "2", "+", "3"}))
 
 	return result
 }
 
 // Функция вычисляет выражение expr, переданное слайсом строк
-// Не является полноценным парсером выражений, это ограниченный прототип только для условий задачи
-// Колхоз, но нет порыва писать AST...
 func calcExpression(expr []string) (res int) {
 
 	// ЭТОТ КОД РАБОТАЕТ С УЧЕТОМ ПРЕИМУЩЕСТВА ОПЕРАЦИИ УМНОЖЕНИЯ ПЕРЕД СЛОЖЕНИЕМ - сначала все умножение, затем все сложение
 	// Делим по символу "+" 11*6+16*20*22+5+6 ---> (11*6)+(16*20*22)+(5)+(6)
 
-	addition := []int{} // слагаемые
+	// addition := []int{} // слагаемые
 
-	strExpr := strings.Join(expr, "")
-	mulParts := strings.Split(strExpr, "+")
+	// strExpr := strings.Join(expr, "")
+	// mulParts := strings.Split(strExpr, "+")
 
-	for _, v := range mulParts {
-		nums := strings.Split(v, "*")
-		mul := 1
+	// for _, v := range mulParts {
+	// 	nums := strings.Split(v, "*")
+	// 	mul := 1
 
-		for _, v := range nums {
-			num, err := strconv.Atoi(v)
-			if err != nil {
-				panic("Non numeric value!")
-			}
-			mul *= num
+	// 	for _, v := range nums {
+	// 		num, err := strconv.Atoi(v)
+	// 		if err != nil {
+	// 			panic("Non numeric value!")
+	// 		}
+	// 		mul *= num
+	// 	}
+
+	// 	addition = append(addition, mul)
+	// }
+
+	// for _, v := range addition {
+	// 	res += v
+	// }
+
+	// ЭТОТ КОД РАБОТАЕТ БЕЗ УЧЕТА ПРЕИМУЩЕСТВА ОПЕРАЦИИ УМНОЖЕНИЯ ПЕРЕД СЛОЖЕНИЕМ - просто слева направо
+	// копия исходного слайса для его изменения
+	tmpExpression := slices.Clone(expr)
+
+	// цикл по знакам операций, в слайсе tmpExpr - знак операции это каждый второй элемент, начиная со второго -- [11 * 6 + 16 * 20]
+	for i := 1; i < len(tmpExpression)-1; i = i + 2 {
+
+		opA, err := strconv.Atoi(tmpExpression[i-1]) // операнд А - до знака
+		if err != nil {
+			panic(err)
+		}
+		opB, err := strconv.Atoi(tmpExpression[i+1]) // операнд B - после знака
+		if err != nil {
+			panic(err)
 		}
 
-		addition = append(addition, mul)
+		// действие над операндами зависит от оператора между ними, результат помещается во второй операнд для следующего цикла
+		switch tmpExpression[i] {
+		case "+":
+			tmpExpression[i+1] = strconv.Itoa(opA + opB)
+		case "*":
+			tmpExpression[i+1] = strconv.Itoa(opA * opB)
+		}
 	}
 
-	for _, v := range addition {
-		res += v
+	tmp, err := strconv.Atoi(tmpExpression[len(tmpExpression)-1])
+	if err != nil {
+		panic(err)
 	}
 
-	//TODO
-	// ЭТОТ КОД ДОЛЖЕН РАБОТАТЬ БЕЗ УЧЕТА ПРЕИМУЩЕСТВА ОПЕРАЦИИ УМНОЖЕНИЯ ПЕРЕД СЛОЖЕНИЕМ - просто слева направо
+	res = tmp
 
 	return res
 }
@@ -103,7 +138,7 @@ func GetAllCombinations(set []string, k int) (list []string) {
 	return list
 }
 
-// Рекурсия для получения всех комбинаций
+// Рекурсия для получения всех комбинаций символов из набора
 func GetAllCombinationsRec(set []string, prefix string, n int, k int) (res []string) {
 
 	// базовый случай - выход из рекурсии
