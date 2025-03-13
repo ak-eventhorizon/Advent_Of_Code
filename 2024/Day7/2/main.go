@@ -21,16 +21,16 @@ type Case struct {
 func main() {
 
 	data := GetData("data.txt")
-
-	answer := day7_1(data)
+	answer := day7_2(data)
 	fmt.Println(answer)
 }
 
-func day7_1(cases []Case) (result int) {
+// Функция возвращает результат по условиям задачи
+func day7_2(cases []Case) (result int) {
 
 	for _, c := range cases {
 
-		operatorsCombinations := GetAllCombinations([]string{"+", "*"}, len(c.numbers)-1)
+		operatorsCombinations := GetAllCombinations([]string{"+", "*", "|"}, len(c.numbers)-1)
 
 		// fmt.Print("For case ", c, " ---> ")                 // DEBUG print
 		// fmt.Println("Combinations:", operatorsCombinations) // DEBUG print
@@ -66,34 +66,7 @@ func day7_1(cases []Case) (result int) {
 // Функция вычисляет выражение expr, переданное слайсом строк
 func calcExpression(expr []string) (res int) {
 
-	// ЭТОТ КОД РАБОТАЕТ С УЧЕТОМ ПРЕИМУЩЕСТВА ОПЕРАЦИИ УМНОЖЕНИЯ ПЕРЕД СЛОЖЕНИЕМ - сначала все умножение, затем все сложение
-	// Делим по символу "+" 11*6+16*20*22+5+6 ---> (11*6)+(16*20*22)+(5)+(6)
-
-	// addition := []int{} // слагаемые
-
-	// strExpr := strings.Join(expr, "")
-	// mulParts := strings.Split(strExpr, "+")
-
-	// for _, v := range mulParts {
-	// 	nums := strings.Split(v, "*")
-	// 	mul := 1
-
-	// 	for _, v := range nums {
-	// 		num, err := strconv.Atoi(v)
-	// 		if err != nil {
-	// 			panic("Non numeric value!")
-	// 		}
-	// 		mul *= num
-	// 	}
-
-	// 	addition = append(addition, mul)
-	// }
-
-	// for _, v := range addition {
-	// 	res += v
-	// }
-
-	// ЭТОТ КОД РАБОТАЕТ БЕЗ УЧЕТА ПРЕИМУЩЕСТВА ОПЕРАЦИИ УМНОЖЕНИЯ ПЕРЕД СЛОЖЕНИЕМ - просто слева направо
+	// ЭТОТ КОД РАБОТАЕТ БЕЗ УЧЕТА ПРЕИМУЩЕСТВА ОПЕРАЦИИ УМНОЖЕНИЯ ПЕРЕД СЛОЖЕНИЕМ - просто слева направо, как указано в условиях задачи
 	// копия исходного слайса для его изменения
 	tmpExpression := slices.Clone(expr)
 
@@ -115,6 +88,8 @@ func calcExpression(expr []string) (res int) {
 			tmpExpression[i+1] = strconv.Itoa(opA + opB)
 		case "*":
 			tmpExpression[i+1] = strconv.Itoa(opA * opB)
+		case "|":
+			tmpExpression[i+1] = strconv.Itoa(opA) + strconv.Itoa(opB)
 		}
 	}
 
