@@ -48,7 +48,7 @@ func day8_1(layout [][]string) (result int) {
 	for k, v := range antennas {
 		antinodes := findAllAntiNodes(v)
 		fmt.Println(k, " --> ", v, "--antinodes-->", antinodes) // DEBUG print
-		// TODO нарисовать антиноды на resField ----------> #
+		// TODO нарисовать антиноды на resField ----> #
 	}
 
 	return result
