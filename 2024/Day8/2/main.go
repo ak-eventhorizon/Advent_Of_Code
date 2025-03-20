@@ -29,9 +29,9 @@ func day8_2(layout [][]string) (result int) {
 		for x, name := range line {
 			if name != "." {
 				// проверка - существует ли уже в перечне антенна такого вида
-				if _, isPresent := antennas[name]; isPresent { // добавить координаты такущей к существующему набору
+				if _, isPresent := antennas[name]; isPresent { // добавить координаты текущей к существующему набору
 					antennas[name] = append(antennas[name], []int{x, y})
-				} else { // создать набор антенн такого вида и добавить к нему координаты такущей
+				} else { // создать набор антенн такого вида и добавить к нему координаты текущей
 					antennas[name] = make([][]int, 0)
 					antennas[name] = append(antennas[name], []int{x, y})
 				}
@@ -39,10 +39,10 @@ func day8_2(layout [][]string) (result int) {
 		}
 	}
 
-	// обход всех видов антенн. по каждому виду построение отражения (антиноды) для каждой антенны относительно каждой другой
+	// обход всех видов антенн. по каждому виду построение всех антинод для каждой антенны относительно каждой другой
 	for _, v := range antennas {
 
-		antinodes := findAllAntiNodes(v)
+		antinodes := findAllAntiNodes(v, len(layout[0]), len(layout))
 		// fmt.Println(k, " --> ", v, "--antinodes-->", antinodes) // DEBUG print
 
 		// нарисовать антиноды # на resultField
@@ -51,12 +51,8 @@ func day8_2(layout [][]string) (result int) {
 			x := antinode[0]
 			y := antinode[1]
 
-			if x >= 0 && x < len(resultField[0]) { // проверка на попадание точки в поле по оси X
-				if y >= 0 && y < len(resultField) { // проверка на попадание точки в поле по оси Y
+			resultField[y][x] = "#" // установка антиноды на поле (антинода может находиться на одной точке с антенной)
 
-					resultField[y][x] = "#" // установка антиноды на поле (антинода может находиться на одной точке с антенной)
-				}
-			}
 		}
 	}
 
@@ -73,18 +69,19 @@ func day8_2(layout [][]string) (result int) {
 	return result
 }
 
-// Функция получает набор антенн [x,y], возвращает набор антинод для входного набора антенн, вычисленных по условиям задачи
-func findAllAntiNodes(antennas [][]int) (antinodes [][]int) {
+// Функция получает набор антенн [[x1 y1] [x2 y2] [x3 y3]...] и размерность поля sizeX, sizeY
+// Возвращает набор антинод для входного набора антенн, вычисленных по условиям задачи
+func findAllAntiNodes(antennas [][]int, sizeX, sizeY int) (antinodes [][]int) {
 
 	for i := range antennas {
 
 		tmp := slices.Clone(antennas)
 		currentAntenna := antennas[i]
-		restAntennas := slices.Delete(tmp, i, i+1)
+		restAntennas := slices.Delete(tmp, i, i+1) // удаление текущей антенны из небора
 
 		for _, secondAntenna := range restAntennas {
-			antinodes = append(antinodes, reflect(currentAntenna, secondAntenna))
-			antinodes = append(antinodes, reflect(secondAntenna, currentAntenna))
+			antinodes = append(antinodes, reflectVector(currentAntenna, secondAntenna, sizeX, sizeY)...)
+			antinodes = append(antinodes, reflectVector(secondAntenna, currentAntenna, sizeX, sizeY)...)
 		}
 
 	}
@@ -92,24 +89,42 @@ func findAllAntiNodes(antennas [][]int) (antinodes [][]int) {
 	return antinodes
 }
 
-// Функция отражает точку p2[x2,y2] относительно точки p1[x1,y1] и возвращает координаты отраженной точки [xr,yr]
-func reflect(p1, p2 []int) (r []int) {
+// Функция вычисляет координаты всей цепочки антинод, которые можно построить внутри поля (размерностью sizeX на sizeY) на основании точек p1 и p2 относительно точки p1
+//
+// ....................   ->   ....................
+// .......1............   ->   ....................
+// ....................   ->   ....................
+// .........2..........   ->   .........#..........
+// ....................   ->   ....................
+// ....................   ->   ...........#........
+// ....................   ->   ....................
+// ....................   ->   .............#......
+// ....................   ->   ....................
+// ....................   ->   ...............#....
+func reflectVector(p1, p2 []int, sizeX, sizeY int) (antinodes [][]int) {
 
-	x1 := p1[0]
-	y1 := p1[1]
+	antinodes = make([][]int, 0)
 
-	x2 := p2[0]
-	y2 := p2[1]
+	x1, y1 := p1[0], p1[1]
+	x2, y2 := p2[0], p2[1]
 
 	deltaX := x1 - x2
 	deltaY := y1 - y2
 
-	r = make([]int, 2)
+	// построение цепочки отражений относительно точки p1 по вычисленному вектору
+	antinodes = append(antinodes, []int{x2, y2}) // первая антинода для точки p1 - это всегда точка p2
+	nextX := x1 + deltaX
+	nextY := y1 + deltaY
+	for {
+		if nextX < 0 || nextX >= sizeX || nextY < 0 || nextY >= sizeY { // выход следующей точки за пределы обозначенного поля
+			break
+		}
+		antinodes = append(antinodes, []int{nextX, nextY})
+		nextX += deltaX
+		nextY += deltaY
+	}
 
-	r[0] = x1 + deltaX
-	r[1] = y1 + deltaY
-
-	return r
+	return antinodes
 }
 
 // Функция извлекает из текстового файла карту задачи.
