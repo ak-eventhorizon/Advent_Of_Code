@@ -29,9 +29,9 @@ func day8_1(layout [][]string) (result int) {
 		for x, name := range line {
 			if name != "." {
 				// проверка - существует ли уже в перечне антенна такого вида
-				if _, isPresent := antennas[name]; isPresent { // добавить координаты такущей к существующему набору
+				if _, isPresent := antennas[name]; isPresent { // добавить координаты текущей к существующему набору
 					antennas[name] = append(antennas[name], []int{x, y})
-				} else { // создать набор антенн такого вида и добавить к нему координаты такущей
+				} else { // создать набор антенн такого вида и добавить к нему координаты текущей
 					antennas[name] = make([][]int, 0)
 					antennas[name] = append(antennas[name], []int{x, y})
 				}
