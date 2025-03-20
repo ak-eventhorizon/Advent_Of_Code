@@ -11,11 +11,6 @@ import (
 // --- Day 8: Resonant Collinearity --- Puzzle 1
 // https://adventofcode.com/2024/day/8
 
-// Поле, с расстановкой объектов на нем
-type Field struct {
-	state [][]string // карта поля, на котором располагается объекты
-}
-
 func main() {
 
 	startLayout := GetData("data.txt")
@@ -25,7 +20,7 @@ func main() {
 
 func day8_1(layout [][]string) (result int) {
 
-	// resField := slices.Clone(layout) // копия исходного поля, для установки на него вычисленных точек
+	resultField := slices.Clone(layout) // копия исходного поля, для установки на него вычисленных точек
 
 	antennas := make(map[string][][]int) // структура для хранения всех видов антенн с координатами - map[A:[[8 1] [5 2] [7 3]] B:[[6 5] [9 9]]]
 
@@ -34,9 +29,9 @@ func day8_1(layout [][]string) (result int) {
 		for x, name := range line {
 			if name != "." {
 				// проверка - существует ли уже в перечне антенна такого вида
-				if _, isPresent := antennas[name]; isPresent { // добавить текущую к существующему набору
+				if _, isPresent := antennas[name]; isPresent { // добавить координаты такущей к существующему набору
 					antennas[name] = append(antennas[name], []int{x, y})
-				} else { // создать набор антенн такого вида и добавить к нему текущую
+				} else { // создать набор антенн такого вида и добавить к нему координаты такущей
 					antennas[name] = make([][]int, 0)
 					antennas[name] = append(antennas[name], []int{x, y})
 				}
@@ -44,13 +39,37 @@ func day8_1(layout [][]string) (result int) {
 		}
 	}
 
-	// обход всех видов антенн. по каждому виду построение отражения (антиноды) для каждой антенны от каждой другой
-	for k, v := range antennas {
+	// обход всех видов антенн. по каждому виду построение отражения (антиноды) для каждой антенны относительно каждой другой
+	for _, v := range antennas {
+
 		antinodes := findAllAntiNodes(v)
-		fmt.Println(k, " --> ", v, "--antinodes-->", antinodes) // DEBUG print
-		// TODO нарисовать антиноды на resField ----> #
+		// fmt.Println(k, " --> ", v, "--antinodes-->", antinodes) // DEBUG print
+
+		// нарисовать антиноды # на resultField
+		for _, antinode := range antinodes {
+
+			x := antinode[0]
+			y := antinode[1]
+
+			if x >= 0 && x < len(resultField[0]) { // проверка на попадание точки в поле по оси X
+				if y >= 0 && y < len(resultField) { // проверка на попадание точки в поле по оси Y
+
+					resultField[y][x] = "#" // установка антиноды на поле (антинода может находиться на одной точке с антенной)
+				}
+			}
+		}
 	}
 
+	// вычисление сколько всего антинод установлено на поле
+	for _, line := range resultField {
+		for _, char := range line {
+			if char == "#" {
+				result++
+			}
+		}
+	}
+
+	SaveData(resultField, "output.txt")
 	return result
 }
 
@@ -61,9 +80,9 @@ func findAllAntiNodes(antennas [][]int) (antinodes [][]int) {
 
 		tmp := slices.Clone(antennas)
 		currentAntenna := antennas[i]
-		restAntens := slices.Delete(tmp, i, i+1)
+		restAntennas := slices.Delete(tmp, i, i+1)
 
-		for _, secondAntenna := range restAntens {
+		for _, secondAntenna := range restAntennas {
 			antinodes = append(antinodes, reflect(currentAntenna, secondAntenna))
 			antinodes = append(antinodes, reflect(secondAntenna, currentAntenna))
 		}
