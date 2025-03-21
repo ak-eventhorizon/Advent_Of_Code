@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 // ********* Advent of Code 2024 *********
@@ -23,12 +24,32 @@ func main() {
 func day9_1(diskMap string) (result int) {
 
 	expandedDiskMap := diskMapExpand(diskMap)
-	defrag(expandedDiskMap)
+	defragedDiskMap := defrag(expandedDiskMap)
+
+	SaveData(strings.Join(defragedDiskMap, ""), "output.txt")
+
+	result = checksum(defragedDiskMap)
 
 	return result
 }
 
-// Функция получает произвольную карту диска: 0..111....22222
+// Функция излекает контрольеую сумму из карты диска
+func checksum(input []string) (result int) {
+
+	for i, v := range input {
+
+		num, err := strconv.Atoi(v)
+		if err != nil {
+			panic(err)
+		}
+
+		result += num * i
+	}
+
+	return result
+}
+
+// Функция получает произвольную развернутую карту диска: 0..111....22222
 // Возвращает дефрагментированную карту, полученную из исходной:
 // 0..111....22222
 // 02.111....2222.
@@ -36,49 +57,36 @@ func day9_1(diskMap string) (result int) {
 // 0221112...22...
 // 02211122..2....
 // 022111222......
+// 022111222
 func defrag(input []string) (result []string) {
 
-	fmt.Println("Input:   ", input) // DEBUG
+	// fmt.Println(input) // DEBUG
 
-	emptySpaceCounter := 0 // количество пропусков, подлежажих дефрагментации
-	for _, v := range input {
-		if v == "." {
-			emptySpaceCounter++
+	for i := 0; i < len(input); i++ { // поиск очередного свободного блока слева-направо >->->->->->->
+
+		if input[i] == "." { // свободный блок найден
+			for j := len(input) - 1; j >= 0; j-- { // поиск очередного значения для перемещения в свободный блок справа-налево <-<-<-<-<-<
+
+				if i == j { // если прямой и обратный обходы встретились >->->->i=j<-<-<-<
+					break
+				}
+
+				if input[j] != "." { // нашли значение для перемещения
+					input[i] = input[j] // перемещение значения в свободный блок
+					input[j] = "."      // освобождение значения
+					// fmt.Println(input)  // DEBUG
+					break
+				}
+			}
 		}
 	}
 
-	fmt.Println("toFill:  ", emptySpaceCounter) // DEBUG
-
-	// копия исходного
-	tmp := slices.Clone(input)
-	// удалить из копии "."
-	tmp = slices.DeleteFunc(tmp, func(n string) bool {
-		return n == "."
+	// Удаление пустых ячеек после дефрагментации [022111222......] --> [022111222]
+	result = slices.DeleteFunc(input, func(s string) bool {
+		return s == "."
 	})
-	// перевернуть копию
-	slices.Reverse(tmp)
-	fmt.Println("Fillers: ", tmp) // DEBUG
 
-	// отрезать нужное количество заполнителя по количеству свободного места для дефрагментации
-	tmp = tmp[:emptySpaceCounter] // ТУТ НЕПРАВИЛЬНО, на самом деле нужно 12
-	fmt.Println("NeedFill:", tmp) // DEBUG
-
-	// поразрядное наполнение результата
-	for _, v := range input {
-
-		if v == "." {
-			result = append(result, tmp[0])
-			tmp = slices.Delete(tmp, 0, 1)
-		} else {
-			result = append(result, v)
-		}
-
-		if len(tmp) == 0 {
-			break
-		}
-
-	}
-	fmt.Println("Result:  ", result) // DEBUG
+	// fmt.Println(result) // DEBUG
 
 	return result
 }
