@@ -4,18 +4,17 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 )
 
 // ********* Advent of Code 2024 *********
-// --- Day 9: Disk Fragmenter --- Puzzle 1
+// --- Day 9: Disk Fragmenter --- Puzzle 2
 // https://adventofcode.com/2024/day/9
 
 func main() {
 
-	diskMap := GetData("data.txt")
+	diskMap := getData("data.txt")
 	answer := day9_1(diskMap)
 
 	fmt.Println(answer)
@@ -23,10 +22,10 @@ func main() {
 
 func day9_1(diskMap string) (result int) {
 
-	expandedDiskMap := diskMapExpand(diskMap)
+	expandedDiskMap := expand(diskMap)
 	defragedDiskMap := defrag(expandedDiskMap)
 
-	SaveData(strings.Join(defragedDiskMap, ""), "output.txt")
+	saveData(strings.Join(defragedDiskMap, ""), "output.txt")
 
 	result = checksum(defragedDiskMap)
 
@@ -49,51 +48,59 @@ func checksum(input []string) (result int) {
 	return result
 }
 
-// Функция получает произвольную развернутую карту диска: 0..111....22222
-// Возвращает дефрагментированную карту, полученную из исходной:
-// 0..111....22222
-// 02.111....2222.
-// 022111....222..
-// 0221112...22...
-// 02211122..2....
-// 022111222......
-// 022111222
+// Функция получает произвольную развернутую карту диска: 0..111....22233
+// Возвращает дефрагментированную карту, полученную из исходной, перенося файлы целиком:
+// 0..111....22233
+// 033111....222..
+// 033111222......
+// 033111222
 func defrag(input []string) (result []string) {
 
-	// fmt.Println(input) // DEBUG
+	fmt.Println(input) // DEBUG
 
-	for i := 0; i < len(input); i++ { // поиск очередного свободного блока слева-направо >->->->->->->
+	blocks := [][]string{}
+	block := []string{}
 
-		if input[i] == "." { // свободный блок найден
-			for j := len(input) - 1; j >= 0; j-- { // поиск очередного значения для перемещения в свободный блок справа-налево <-<-<-<-<-<
+	files := [][]string{}
+	file := []string{}
 
-				if i == j { // если прямой и обратный обходы встретились >->->->i=j<-<-<-<
-					break
-				}
+	// разбираем ввод на однородные блоки [0 0 . . . 1 1 1 . . . 2] --> [ [0 0] [. . .] [1 1 1] [. . .] [2] ]
+	for i := 0; i < len(input); i++ {
 
-				if input[j] != "." { // нашли значение для перемещения
-					input[i] = input[j] // перемещение значения в свободный блок
-					input[j] = "."      // освобождение значения
-					// fmt.Println(input)  // DEBUG
-					break
-				}
+		block = append(block, input[i])
+
+		if (i+1 < len(input)) && (input[i+1] == input[i]) { // следующий элемент является продолжением текущего
+			continue
+		} else { // этот элемент последний в блоке
+			blocks = append(blocks, block)
+			block = []string{}
+		}
+	}
+
+	// Поиск всех файлов справа-налево <-<-<-<-<-<
+	for i := len(input) - 1; i >= 0; i-- {
+
+		if input[i] != "." { // если элемент не пустой - значит начался файл
+			file = append(file, input[i])
+
+			if (i-1 >= 0) && (input[i-1] == input[i]) { // следующий элемент является продолжением файла
+				continue
+			} else { // этот элемент последний в данном файле, копируем файл в список файлов, сбрасываем переменную для следующего
+				files = append(files, file)
+				file = []string{}
 			}
 		}
 	}
 
-	// Удаление пустых ячеек после дефрагментации [022111222......] --> [022111222]
-	result = slices.DeleteFunc(input, func(s string) bool {
-		return s == "."
-	})
-
-	// fmt.Println(result) // DEBUG
+	fmt.Println(blocks) // DEBUG
+	fmt.Println(files)  // DEBUG
 
 	return result
 }
 
 // Функция получает карту диска в свернутом виде: "12345"
 // И разворачивает ее по правилам, описанным в задаче: [0 . . 1 1 1 . . . . 2 2 2 2 2]
-func diskMapExpand(diskMap string) (result []string) {
+func expand(diskMap string) (result []string) {
 
 	fileID := 0
 
@@ -120,7 +127,7 @@ func diskMapExpand(diskMap string) (result []string) {
 }
 
 // Функция извлекает из файла filename строку с условием задачи.
-func GetData(filename string) (s string) {
+func getData(filename string) (s string) {
 
 	file, err := os.Open(filename)
 
@@ -141,7 +148,7 @@ func GetData(filename string) (s string) {
 }
 
 // Функция сохраняет строку в файл filename.
-func SaveData(s string, filename string) {
+func saveData(s string, filename string) {
 
 	file, err := os.Create(filename)
 
