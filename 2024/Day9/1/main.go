@@ -33,7 +33,7 @@ func day9_1(diskMap string) (result int) {
 	return result
 }
 
-// Функция излекает контрольеую сумму из карты диска
+// Функция излекает контрольную сумму из карты диска
 func checksum(input []string) (result int) {
 
 	for i, v := range input {
