@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -56,7 +57,7 @@ func checksum(input []string) (result int) {
 // 033111222
 func defrag(input []string) (result []string) {
 
-	fmt.Println(input) // DEBUG
+	fmt.Println("Input: ", input) // DEBUG
 
 	blocks := [][]string{}
 	block := []string{}
@@ -92,10 +93,36 @@ func defrag(input []string) (result []string) {
 		}
 	}
 
-	fmt.Println(blocks) // DEBUG
-	fmt.Println(files)  // DEBUG
+	fmt.Println("Blocks:", blocks) // DEBUG
+	fmt.Println("Files: ", files)  // DEBUG
+
+	// TODO rebuildDisk()
 
 	return result
+}
+
+// Функуция получает карту диска и пытается переместить каждый файл с конца в ближайшее слева свободное место, подходящее по размеру
+// При успешном перемещении файла он стирается в исходном месте расположения
+func rebuildDisk(initialMap [][]string) (rebuildMap [][]string) {
+
+	rebuildMap = slices.Clone(initialMap) // копия исходной карты для помещения в нее перестроенных файлов
+
+	for i := len(initialMap) - 1; i >= 0; i-- { // поиск следующего файла справа-налево <-<-<-<-<
+		if initialMap[i][0] != "." { // блок содержит файл
+
+			fileLen := len(initialMap[i])
+
+			for j := 0; j < len(rebuildMap); j++ { // поиск следующего пустого блока слева направо >->->->->
+				if rebuildMap[j][0] == "." { // блок содержит пустое место
+					// ...[. . . . .]... + [2 2 2] -> ...[2 2 2] [. .]...
+					// ...[. . .]... + [2 2 2] -> ...[2 2 2]...
+				}
+			}
+
+		}
+	}
+
+	return rebuildMap
 }
 
 // Функция получает карту диска в свернутом виде: "12345"
