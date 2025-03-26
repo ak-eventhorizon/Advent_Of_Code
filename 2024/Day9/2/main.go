@@ -33,10 +33,14 @@ func day9_1(diskMap string) (result int) {
 	return result
 }
 
-// Функция излекает контрольеую сумму из карты диска
+// Функция излекает контрольную сумму из карты диска
 func checksum(input []string) (result int) {
 
 	for i, v := range input {
+
+		if v == "." {
+			continue
+		}
 
 		num, err := strconv.Atoi(v)
 		if err != nil {
@@ -54,10 +58,7 @@ func checksum(input []string) (result int) {
 // 0..111....22233
 // 033111....222..
 // 033111222......
-// 033111222
 func defrag(input []string) (result []string) {
-
-	fmt.Println("Input: ", input) // DEBUG
 
 	blocks := [][]string{}
 	block := []string{}
@@ -78,7 +79,7 @@ func defrag(input []string) (result []string) {
 		}
 	}
 
-	// Поиск всех файлов справа-налево <-<-<-<-<-<
+	// извлечение всех файлов справа-налево <-<-<-<-<-<
 	for i := len(input) - 1; i >= 0; i-- {
 
 		if input[i] != "." { // если элемент не пустой - значит начался файл
@@ -93,36 +94,69 @@ func defrag(input []string) (result []string) {
 		}
 	}
 
-	fmt.Println("Blocks:", blocks) // DEBUG
-	fmt.Println("Files: ", files)  // DEBUG
+	// файл за файлом проводим дефрагментацию
+	for _, file := range files {
+		blocks = moveFile(blocks, file[0])
+	}
 
-	// TODO rebuildDisk()
+	// собираем данные в формат результата
+	for _, v := range blocks {
+		result = append(result, v...)
+	}
+
+	// fmt.Println(input)  // DEBUG
+	// fmt.Println(result) // DEBUG
 
 	return result
 }
 
-// Функуция получает карту диска и пытается переместить каждый файл с конца в ближайшее слева свободное место, подходящее по размеру
-// При успешном перемещении файла он стирается в исходном месте расположения
-func rebuildDisk(initialMap [][]string) (rebuildMap [][]string) {
+// Функуция получает карту диска и ID файла, пробует переместить его в свободное место слева
+// Если это удается - удаляет исходное расположение файла. Возвращает слайс (измененный или исходный в зависимости от результата перемещения файла)
+func moveFile(initMap [][]string, fileID string) (resMap [][]string) {
 
-	rebuildMap = slices.Clone(initialMap) // копия исходной карты для помещения в нее перестроенных файлов
+	resMap = slices.Clone(initMap)
 
-	for i := len(initialMap) - 1; i >= 0; i-- { // поиск следующего файла справа-налево <-<-<-<-<
-		if initialMap[i][0] != "." { // блок содержит файл
+	// поиск файла справа-налево <-<-<-<-<
+	for i := len(initMap) - 1; i >= 0; i-- {
+		if initMap[i][0] == fileID { // файл найден
 
-			fileLen := len(initialMap[i])
+			file := initMap[i]
+			fileIndex := i
+			fileLen := len(initMap[i])
 
-			for j := 0; j < len(rebuildMap); j++ { // поиск следующего пустого блока слева направо >->->->->
-				if rebuildMap[j][0] == "." { // блок содержит пустое место
-					// ...[. . . . .]... + [2 2 2] -> ...[2 2 2] [. .]...
-					// ...[. . .]... + [2 2 2] -> ...[2 2 2]...
+			// поиск пустого блока от начала до текущего файла
+			for j := 0; j < i; j++ {
+				if initMap[j][0] == "." { // пустой блок найден
+
+					spaceLen := len(initMap[j])
+					spaceBlock := make([]string, fileLen)
+					for k := range spaceBlock {
+						spaceBlock[k] = "."
+					}
+
+					if fileLen == spaceLen { // файл укладывается в свободное место точно по размеру - [. . .] + [2 2 2] -> [2 2 2]
+						resMap[j] = file               // перемещение файла в пустой блок
+						resMap[fileIndex] = spaceBlock // замещение исходной позиции файла пустым местом
+						break
+
+					} else if fileLen < spaceLen { // файл меньше свободного блока - [. . . . .] + [2 2 2] -> [2 2 2] + [. .]
+						partOne := file                             // первая часть - файл
+						partTwo := make([]string, spaceLen-fileLen) // вторая часть - пустое место, оставшееся после размещения файла
+						for k := range spaceLen - fileLen {
+							partTwo[k] = "."
+						}
+						resMap[fileIndex] = spaceBlock                      // замещение исходной позиции файла пустым местом
+						resMap = slices.Delete(resMap, j, j+1)              // удаление свободного блока, вместо которого будет установлен файл и добор
+						resMap = slices.Insert(resMap, j, partOne, partTwo) // вставка файла и остаточного пустого блока
+						break
+
+					}
 				}
 			}
-
 		}
 	}
 
-	return rebuildMap
+	return resMap
 }
 
 // Функция получает карту диска в свернутом виде: "12345"
