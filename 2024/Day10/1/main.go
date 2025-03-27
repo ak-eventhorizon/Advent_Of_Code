@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 // ********* Advent of Code 2024 *********
@@ -22,24 +23,21 @@ func main() {
 
 func day10_1(fieldMap [][]int) (result int) {
 
-	// // поиск на карте всех точек старта "0"
-	// startPoints := [][]int{}
-	// for y, line := range fieldMap {
-	// 	for x := range line {
-	// 		if fieldMap[y][x] == 0 {
-	// 			startPoints = append(startPoints, []int{x, y})
-	// 		}
-	// 	}
-	// }
+	// поиск на карте всех точек старта "0"
+	startPoints := [][]int{}
+	for y, line := range fieldMap {
+		for x := range line {
+			if fieldMap[y][x] == 0 {
+				startPoints = append(startPoints, []int{x, y})
+			}
+		}
+	}
 
-	// // вычисление для каждой точки количества возможных из нее маршрутов
-	// for _, startPoint := range startPoints {
-	// 	routes := countRoutes(startPoint, fieldMap)
-	// 	fmt.Println(startPoint, " - ", routes) // DEBUG
-	// 	result += routes
-	// }
-
-	_ = countRoutes([]int{4, 0}, fieldMap) // должно быть 6
+	// вычисление для каждой точки количества возможных из нее маршрутов
+	for _, startPoint := range startPoints {
+		routes := countRoutes(startPoint, fieldMap)
+		result += routes
+	}
 
 	return result
 }
@@ -50,12 +48,10 @@ func countRoutes(start []int, field [][]int) (routes int) {
 
 	currentCells := [][]int{}
 	currentCells = append(currentCells, start)
-	fmt.Println("0") // DEBUG
 
 	// для прохождения всего пути по условиям задачи нужно 9 шагов
 	for i := 1; i <= 9; i++ {
 		currentCells = stepBFS(currentCells, field)
-		fmt.Println(i) // DEBUG
 	}
 
 	routes = len(currentCells)
@@ -67,27 +63,44 @@ func countRoutes(start []int, field [][]int) (routes int) {
 // получает на вход слой текущих клеток (слайс координат [xy]), возвращает слой клеток на которые можно перейти из текущих (слайс координат [xy])
 func stepBFS(currentCells [][]int, field [][]int) (nextCells [][]int) {
 
-	fmt.Println("1", currentCells) //DEBUG
-
 	for _, cell := range currentCells {
 		nextCells = append(nextCells, getNextCells(cell, field)...)
 	}
 
-	fmt.Println("2", nextCells)
-
 	// удалению дублей, поскольку одна клетка может быть достигнута на этом шаге несколькими разными путями
-	nextCells = slices.CompactFunc(nextCells, func(e1 []int, e2 []int) bool {
-		return slices.Equal(e1, e2)
-	})
-
-	fmt.Println("3", nextCells) // DEBUG -- НЕ УДАЛАЮТСЯ ВСЕ ДУБЛИ, для этого требуется отсортированный слайс - заменить CompactFunc на свою функцию removeDuplicates
+	nextCells = removeDuplicates(nextCells)
 
 	return nextCells
 }
 
-// TODO Функция удаляет дубли
+// Функция удаляет дубли из произвольного слайса слайсов целых чисел
 func removeDuplicates(source [][]int) (result [][]int) {
-	return
+
+	// превращение слайса слайсов интов в слайс строк, который можно отсортировать и удалить дубли в сортированном
+	strSlice := []string{}
+	for _, elem := range source {
+		strElem := strings.Trim(strings.Replace(fmt.Sprint(elem), " ", "-", -1), "[]") // [3 4] --> "3-4"
+		strSlice = append(strSlice, strElem)
+	}
+
+	slices.Sort(strSlice)               // сортировка
+	strSlice = slices.Compact(strSlice) // удаление дубликатов
+
+	// превращение слайса строк обратно в слайс слайсов интов
+	for _, s := range strSlice {
+		elements := strings.Split(s, "-")
+		element := []int{}
+		for _, v := range elements {
+			num, err := strconv.Atoi(v)
+			if err != nil {
+				panic(err)
+			}
+			element = append(element, num)
+		}
+		result = append(result, element)
+	}
+
+	return result
 }
 
 // Функция возвращает координаты клеток [[xy] [xy]], в которые можно сделать шаг из указанной клетки [xy] на поле field
