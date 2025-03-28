@@ -54,7 +54,7 @@ func countRoutes(start []int, field [][]int) (routes int) {
 		currentCells = stepBFS(currentCells, field)
 	}
 
-	routes = len(currentCells)
+	routes = len(currentCells) // количество ячеек в слайсе после 9 (последнего) шага
 
 	return routes
 }
@@ -67,8 +67,8 @@ func stepBFS(currentCells [][]int, field [][]int) (nextCells [][]int) {
 		nextCells = append(nextCells, getNextCells(cell, field)...)
 	}
 
-	// удалению дублей, поскольку одна клетка может быть достигнута на этом шаге несколькими разными путями
-	nextCells = removeDuplicates(nextCells)
+	// удалению дублей в этой задаче не требуется, поскольку одна клетка может быть достигнута на каждом шаге несколькими разными путями и нам нужны все эти пути
+	// nextCells = removeDuplicates(nextCells)
 
 	return nextCells
 }
@@ -181,9 +181,10 @@ func GetData(filename string) (layout [][]int) {
 
 			n, err := strconv.Atoi(string(char))
 			if err != nil {
-				panic(err)
+				line = append(line, -1) // -1 означает все ячейки матрицы, которые не являются числами в источнике, например "..4321." -> [-1 -1 4 3 2 1 -1]
+			} else {
+				line = append(line, n)
 			}
-			line = append(line, n)
 		}
 		layout = append(layout, line)
 	}
@@ -205,8 +206,13 @@ func SaveData(layout [][]int, filename string) {
 	for i, line := range layout {
 		var s string
 		for _, char := range line {
-			s += strconv.Itoa(char)
+			if char >= 0 {
+				s += strconv.Itoa(char)
+			} else {
+				s += "."
+			}
 		}
+
 		file.WriteString(s)
 
 		if i != len(layout)-1 {
