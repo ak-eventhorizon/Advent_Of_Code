@@ -14,10 +14,13 @@ import (
 // --- Day 12: Garden Groups --- Puzzle 2
 // https://adventofcode.com/2024/day/12
 
+const INPUT_FILE_PATH string = "data.txt"
+const OUTPUT_FILE_PATH string = "output.txt"
+
 func main() {
 	start := time.Now()
 
-	input := GetData("data.txt")
+	input := GetData(INPUT_FILE_PATH)
 	answer := day12_2(input)
 	fmt.Println(answer)
 
@@ -26,7 +29,7 @@ func main() {
 
 func day12_2(input [][]string) (result int) {
 
-	os.Truncate("output.txt", 0) //очистка файла
+	os.Truncate(OUTPUT_FILE_PATH, 0) //очистка файла
 
 	gardens := extractRegions(input)
 
@@ -34,13 +37,13 @@ func day12_2(input [][]string) (result int) {
 
 		for i := 0; i < len(garden); i++ {
 			line := strings.Join(garden[i], "")
-			SaveToFile(line, "output.txt")
+			SaveToFile(line, OUTPUT_FILE_PATH)
 		}
 
 		price := calcFencePrice(garden)
 		result += price
 
-		SaveToFile("Price: "+strconv.Itoa(price)+"\n", "output.txt")
+		SaveToFile("Price: "+strconv.Itoa(price)+"\n", OUTPUT_FILE_PATH)
 	}
 
 	return result
@@ -55,7 +58,7 @@ func day12_2(input [][]string) (result int) {
 // +-+
 func calcFencePrice(matrix [][]string) (result int) {
 
-	area := 0  // количество клеток, занятых садом
+	area := 0  // количество клеток, занятых регионом
 	sides := 0 // количество сторон региона
 
 	for _, line := range matrix {
@@ -66,16 +69,114 @@ func calcFencePrice(matrix [][]string) (result int) {
 		}
 	}
 
-	sides += countCorners(matrix)
+	sides = countCorners(matrix)
 
 	return area * sides
 }
 
-// TODO
 // Функция считает количество углов в матрице, количество сторон фигуры всегда равно количеству углов в ней
 func countCorners(matrix [][]string) (result int) {
 
-	// Дополнить исходную матрицу пустыми строкой/столбцом с каждой стороны. Начать обход с позиции 1-1 до конца.
+	// Дополнить исходную матрицу пустыми строкой/столбцом с каждой стороны чтобы при анализе клеток не было необходимости проверять выход за границы матрицы
+	var copyMatrix [][]string
+	sizeCopyMatrixY := len(matrix) + 2
+	sizeCopyMatrixX := len(matrix[0]) + 2
+
+	for i := 0; i < sizeCopyMatrixY; i++ {
+		var line []string
+
+		if i == 0 || i == sizeCopyMatrixY-1 { // первая и последняя строка матрицы заполняется пустыми строками
+			for range sizeCopyMatrixX {
+				line = append(line, ".")
+			}
+			copyMatrix = append(copyMatrix, line)
+		} else {
+			line = append(line, ".")
+			line = append(line, matrix[i-1]...)
+			line = append(line, ".")
+			copyMatrix = append(copyMatrix, line)
+		}
+	}
+
+	// Последовательный анализ каждой клетки (XX)- на предмет касается ли она угла (изнутри и/или снаружи)
+	// UL UU UR
+	// LL XX RR
+	// DL DD DR
+	for y, line := range copyMatrix {
+		for x, cell := range line {
+
+			XX := cell
+
+			if XX == "." { // пропускаем пустые клетки
+				continue
+			} else {
+				UL := copyMatrix[y-1][x-1]
+				UU := copyMatrix[y-1][x]
+				UR := copyMatrix[y-1][x+1]
+				RR := copyMatrix[y][x+1]
+				DR := copyMatrix[y+1][x+1]
+				DD := copyMatrix[y+1][x]
+				DL := copyMatrix[y+1][x-1]
+				LL := copyMatrix[y][x-1]
+
+				// * . *
+				// . x *
+				// * * *
+				if UU == LL && XX != UU {
+					result++
+				}
+
+				// . x *
+				// x x *
+				// * * *
+				if XX == UU && XX == LL && XX != UL {
+					result++
+				}
+
+				// * . *
+				// * x .
+				// * * *
+				if UU == RR && XX != UU {
+					result++
+				}
+
+				// * x .
+				// * x x
+				// * * *
+				if XX == UU && XX == RR && XX != UR {
+					result++
+				}
+
+				// * * *
+				// * x .
+				// * . *
+				if DD == RR && XX != DD {
+					result++
+				}
+
+				// * * *
+				// * x x
+				// * x .
+				if XX == RR && XX == DD && XX != DR {
+					result++
+				}
+
+				// * * *
+				// . x *
+				// * . *
+				if LL == DD && XX != LL {
+					result++
+				}
+
+				// * * *
+				// x x *
+				// . x *
+				if XX == DD && XX == LL && XX != DL {
+					result++
+				}
+			}
+		}
+	}
 
 	return result
 }
