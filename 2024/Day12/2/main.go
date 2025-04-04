@@ -31,14 +31,13 @@ func day12_2(input [][]string) (result int) {
 	gardens := extractRegions(input)
 
 	for _, garden := range gardens {
-		transformed := transformToWeights(garden)
 
 		for i := 0; i < len(garden); i++ {
-			line := strings.Join(garden[i], "") + "  -->  " + strings.Join(transformed[i], "")
+			line := strings.Join(garden[i], "")
 			SaveToFile(line, "output.txt")
 		}
 
-		price := calcFencePrice(transformed)
+		price := calcFencePrice(garden)
 		result += price
 
 		SaveToFile("Price: "+strconv.Itoa(price)+"\n", "output.txt")
@@ -48,80 +47,35 @@ func day12_2(input [][]string) (result int) {
 }
 
 // Функция вычисляет стоимость забора для полученной матрицы
-// Стоимость = количество_клеток_сада * количество_секций_забора
-// +-+-+-+-+
-// |3 2 2 3|	4 * ( 3 + 2 + 2 + 3) = 40
-// +-+-+-+-+
+// Стоимость = количество_клеток_региона * количество_сторон_региона
+// +-------+
+// |A A A A|	6 * 6 = 36
+// |A+-----+
+// |A|
+// +-+
 func calcFencePrice(matrix [][]string) (result int) {
 
-	cellCount := 0 // количество клеток, занятых садом
-	fenceSum := 0  // количество секций забора, требуемых для огораживания сада
+	area := 0  // количество клеток, занятых садом
+	sides := 0 // количество сторон региона
 
 	for _, line := range matrix {
 		for _, char := range line {
 			if char != "." {
-				val, err := strconv.Atoi(char)
-				if err != nil {
-					panic(err)
-				}
-
-				cellCount++
-				fenceSum += val
+				area++
 			}
 		}
 	}
 
-	return cellCount * fenceSum
+	sides += countCorners(matrix)
+
+	return area * sides
 }
 
-// Функция получает карту сада и возвращает карту, в которой значения клеток сада заменеты на их вес (количество ребер, для которых требуется забор)
-//
-//	AAAA		+-+-+-+-+		3223
-//	....		|A A A A|		....
-//	....		+-+-+-+-+		....
-//	....						....
-func transformToWeights(matrix [][]string) (result [][]string) {
+// TODO
+// Функция считает количество углов в матрице, количество сторон фигуры всегда равно количеству углов в ней
+func countCorners(matrix [][]string) (result int) {
 
-	// делаем копию исходного поля
-	for _, line := range matrix {
-		result = append(result, slices.Clone(line))
-	}
-
-	lenY := len(matrix)
-	lenX := len(matrix[0])
-
-	for y, line := range matrix {
-		for x, char := range line {
-
-			if char == "." {
-				continue
-			}
-
-			weight := 0
-
-			// нужен ли забор сверху
-			if y == 0 || matrix[y-1][x] != char {
-				weight++
-			}
-
-			// нужен ли забор снизу
-			if y == lenY-1 || matrix[y+1][x] != char {
-				weight++
-			}
-
-			// нужен ли забор слева
-			if x == 0 || matrix[y][x-1] != char {
-				weight++
-			}
-
-			// нужен ли забор справа
-			if x == lenX-1 || matrix[y][x+1] != char {
-				weight++
-			}
-
-			result[y][x] = strconv.Itoa(weight)
-		}
-	}
+	// Дополнить исходную матрицу пустыми строкой/столбцом с каждой стороны. Начать обход с позиции 1-1 до конца.
 
 	return result
 }
