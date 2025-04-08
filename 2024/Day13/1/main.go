@@ -55,14 +55,15 @@ func (m Machine) Display() {
 func main() {
 	start := time.Now()
 
+	// DEBUG
 	newClaw := Point{0, 0}
 	newPrize := Point{90, 90}
 	newMachine := Machine{5, 5, 3, 3, newClaw, newPrize}
 	newMachine.Display()
 
-	input := GetData(INPUT_FILE_PATH)
-	answer := day13_1(input)
-	fmt.Println(answer)
+	// input := GetData(INPUT_FILE_PATH)
+	// answer := day13_1(input)
+	// fmt.Println(answer)
 
 	fmt.Printf("%s \n", time.Since(start)) // время выполнения функции
 }
