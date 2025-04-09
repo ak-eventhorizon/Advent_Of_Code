@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
+	"strconv"
 	"time"
 )
 
@@ -56,12 +58,15 @@ func main() {
 	start := time.Now()
 
 	// DEBUG
-	newClaw := Point{0, 0}
-	newPrize := Point{90, 90}
-	newMachine := Machine{5, 5, 3, 3, newClaw, newPrize}
-	newMachine.Display()
+	// newClaw := Point{0, 0}
+	// newPrize := Point{90, 90}
+	// newMachine := Machine{5, 5, 3, 3, newClaw, newPrize}
+	// newMachine.Display()
 
-	// input := GetData(INPUT_FILE_PATH)
+	input := GetData(INPUT_FILE_PATH)
+	for _, v := range input {
+		fmt.Println(v)
+	}
 	// answer := day13_1(input)
 	// fmt.Println(answer)
 
@@ -73,8 +78,8 @@ func day13_1(input [][]string) (result int) {
 	return result
 }
 
-// Функция извлекает из файла filename матрицу исходных данных
-func GetData(filename string) (matrix [][]string) {
+// Функция извлекает из файла filename набор исходных данных
+func GetData(filename string) (machines []Machine) {
 
 	file, err := os.Open(filename)
 
@@ -85,17 +90,48 @@ func GetData(filename string) (matrix [][]string) {
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
 
+	var strNums []string
+
+	// TODO parser (пустая строка - плохой подход, парсится 3 из 4)
 	for scanner.Scan() {
-		var line []string
-		for _, char := range scanner.Text() {
-			line = append(line, string(char))
+
+		if scanner.Text() == "" { // начинается описание следующей машины, сохраняем предыдущую
+
+			var intNums []int
+
+			for _, s := range strNums {
+				num, err := strconv.Atoi(s)
+				if err != nil {
+					panic(err)
+				}
+				intNums = append(intNums, num)
+			}
+
+			ax := intNums[0]
+			ay := intNums[1]
+			bx := intNums[2]
+			by := intNums[3]
+			prizeX := intNums[4]
+			prizeY := intNums[5]
+
+			claw := Point{0, 0}
+			prize := Point{prizeX, prizeY}
+			machine := Machine{ax, ay, bx, by, claw, prize}
+
+			machines = append(machines, machine)
+
+			strNums = []string{} // сбрасываем накопитель значений для следующей итерации
+
+		} else {
+			pattern := regexp.MustCompile(`\d+`) // выхватывает из строки цифры
+			digitsInThisLine := pattern.FindAllString(scanner.Text(), -1)
+			strNums = append(strNums, digitsInThisLine...)
 		}
-		matrix = append(matrix, line)
 	}
 
 	file.Close()
 
-	return matrix
+	return machines
 }
 
 // Функция дописывает строку line в файл filename
