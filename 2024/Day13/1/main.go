@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"strconv"
@@ -43,7 +44,7 @@ func (m *Machine) PushButtonB() {
 }
 
 func (m Machine) Display() {
-	fmt.Printf("A(%v,%v) B(%v,%v) Claw (%v,%v) Prize(%v,%v)\n",
+	fmt.Printf("A(%v,%v) B(%v,%v) Claw (%v,%v) Prize(%v,%v)",
 		m.AX,
 		m.AY,
 		m.BX,
@@ -66,65 +67,52 @@ func main() {
 
 func day13_1(machines []Machine) (result int) {
 
-	// DEBUG - тестируем на одной машине из списка
-	// result = calcCheapestWinCombination(machines[0])
+	var bruteforce int
+	var cramer int
 
 	for _, m := range machines {
-		result += calcCheapestWinCombination(m)
+		bruteforce += calcCheapestWinCombination_bruteForce(m)
+		cramer += calcCheapestWinCombination_Cramer(m)
 	}
 
-	return result
+	fmt.Println("BruteForce: ", bruteforce)
+	fmt.Println("Cramer:     ", cramer)
+
+	return cramer
 }
 
 // Функция вычисляет самую дешевую комбинацию нажатия кнопок A в B на игровом автомате, требуемую для перемещение клешни в координаты приза
-// Одно нажатие кнопки A стоит 3 монеты, одно нажатие кнопки B стоит 1 монету
 // Если комбинации не существут - функция возвращает 0
-func calcCheapestWinCombination(machine Machine) (result int) {
+// Реализована перебором всех комбинаций
+func calcCheapestWinCombination_bruteForce(machine Machine) (result int) {
 
-	// успешные комбинации нажатия кнопок [A,B]
-	var success [][]int
+	const BUTTON_A_COST = 3 // Стоимость нажатия кнопки A
+	const BUTTON_B_COST = 1 // Стоимость нажатия кнопки B
 
-	// пробуем все комбинации нажатий кнопок от "ни разу" до лимита в 100 раз (лимит из условия задачи), сохраняем те, которые приводят к победе
-	for countA := 0; countA <= 100; countA++ {
+	var success [][]int // успешные комбинации нажатия кнопок [A,B]
 
-		if countA != 0 {
-			machine.PushButtonA()
-		}
+	for A := 0; A <= 100; A++ {
+		for B := 0; B <= 100; B++ {
 
-		if machine.Claw.x == machine.Prize.x && machine.Claw.y == machine.Prize.y { // попали в приз нажатием только кнопки А
-			success = append(success, []int{countA, 0})
-			break
-		}
+			// Копия машины, чтобы не изменять исходную
+			tempClaw := Point{machine.Claw.x, machine.Claw.y}
+			tempPrize := Point{machine.Prize.x, machine.Prize.y}
+			tempMachine := Machine{machine.AX, machine.AY, machine.BX, machine.BY, tempClaw, tempPrize}
 
-		if machine.Claw.x > machine.Prize.x || machine.Claw.y > machine.Prize.y { // проскочили приз нажатием только кнопки А
-			break
-		}
+			for range A {
+				tempMachine.PushButtonA()
+			}
 
-		savedClawX := machine.Claw.x // сохраняем координаты клешни, для ее возвращения в исходную позицию после отработки вложенного цикла
-		savedClawY := machine.Claw.y
+			for range B {
+				tempMachine.PushButtonB()
+			}
 
-		for countB := 1; countB <= 100; countB++ {
-
-			machine.PushButtonB()
-
-			// DEBUG
-			// var ding string
-			// if machine.Claw.x == machine.Prize.x && machine.Claw.y == machine.Prize.y {
-			// 	ding = "<<<<<<< DING!!!"
-			// }
-			// s := fmt.Sprintf("A(%v) B(%v) Claw:(%v %v) -- Prize:(%v %v) %v", countA, countB, machine.Claw.x, machine.Claw.y, machine.Prize.x, machine.Prize.y, ding)
-			// SaveToFile(s, OUTPUT_FILE_PATH)
-
-			if machine.Claw.x == machine.Prize.x && machine.Claw.y == machine.Prize.y { // попали в приз
-				success = append(success, []int{countA, countB})
-				machine.Claw.x = savedClawX // возвращаем клешню на состояние до внутреннего цикла
-				machine.Claw.y = savedClawY
+			if tempMachine.Claw.x == tempMachine.Prize.x && tempMachine.Claw.y == tempMachine.Prize.y { // попали в приз
+				success = append(success, []int{A, B})
 				break
 			}
 
-			if machine.Claw.x > machine.Prize.x || machine.Claw.y > machine.Prize.y { // проскочили приз
-				machine.Claw.x = savedClawX // возвращаем клешню на состояние до внутреннего цикла
-				machine.Claw.y = savedClawY
+			if tempMachine.Claw.x > tempMachine.Prize.x || tempMachine.Claw.y > tempMachine.Prize.y { // проскочили приз
 				break
 			}
 		}
@@ -132,15 +120,9 @@ func calcCheapestWinCombination(machine Machine) (result int) {
 
 	// поиск самого дешевого решения
 	if len(success) != 0 {
-
-		// fmt.Println("Win combinations: ", success) // DEBUG
-
 		for _, combination := range success {
 
-			costOfWin := combination[0]*3 + combination[1]*1
-
-			// fmt.Print("For A = ", combination[0], " B = ", combination[1], " ") // DEBUG
-			// fmt.Println("Cost of Win =", costOfWin)                             // DEBUG
+			costOfWin := combination[0]*BUTTON_A_COST + combination[1]*BUTTON_B_COST
 
 			if result == 0 {
 				result = costOfWin
@@ -153,7 +135,40 @@ func calcCheapestWinCombination(machine Machine) (result int) {
 	return result
 }
 
-//TODO -- сделать вторую функцию calcCheapestWinCombination, вычисляющуу результат по методу Крамера. Сравнить результаты функций
+// Функция вычисляет самую дешевую комбинацию нажатия кнопок A в B на игровом автомате, требуемую для перемещение клешни в координаты приза
+// Если комбинации не существут - функция возвращает 0
+// Реализована с использованием правила Крамера - способа решения систем линейных уравнений с числом уравнений равным числу неизвестных
+func calcCheapestWinCombination_Cramer(machine Machine) (result int) {
+
+	const BUTTON_A_COST = 3 // Стоимость нажатия кнопки A
+	const BUTTON_B_COST = 1 // Стоимость нажатия кнопки B
+
+	var A, B float64 // количество нажатий кнопок A и B (их требуется найти)
+
+	Ax, Ay := machine.AX, machine.AY           // смещение по осям x и y при нажатии кнопки A
+	Bx, By := machine.BX, machine.BY           // смещение по осям x и y при нажатии кнопки B
+	Px, Py := machine.Prize.x, machine.Prize.y // координаты приза по осям x и y
+
+	// Задача может быть выражена следующей системой уравнений:
+	// Ax*A + Bx*B = Px
+	// Ay*A + By*B = Py
+	// Система решается с использованием метода Крамера
+
+	D := (Ax * By) - (Ay * Bx)   // Главная детерминанта
+	D_a := (Px * By) - (Py * Bx) // Детерминанта для A
+	D_b := (Py * Ax) - (Px * Ay) // Детерминанта для B
+
+	A = float64(D_a) / float64(D)
+	B = float64(D_b) / float64(D)
+
+	// Если A и B - целые, то можно выиграть приз для данной игровой машины
+	if math.Floor(A) == A && math.Floor(B) == B {
+		costOfWin := A*BUTTON_A_COST + B*BUTTON_B_COST
+		result = int(costOfWin)
+	}
+
+	return result
+}
 
 // Функция извлекает из файла filename набор исходных данных
 func GetData(filename string) (machines []Machine) {
