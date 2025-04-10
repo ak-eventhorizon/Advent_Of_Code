@@ -57,26 +57,103 @@ func (m Machine) Display() {
 func main() {
 	start := time.Now()
 
-	// DEBUG
-	// newClaw := Point{0, 0}
-	// newPrize := Point{90, 90}
-	// newMachine := Machine{5, 5, 3, 3, newClaw, newPrize}
-	// newMachine.Display()
-
 	input := GetData(INPUT_FILE_PATH)
-	for _, v := range input {
-		fmt.Println(v)
-	}
-	// answer := day13_1(input)
-	// fmt.Println(answer)
+	answer := day13_1(input)
+	fmt.Println(answer)
 
 	fmt.Printf("%s \n", time.Since(start)) // время выполнения функции
 }
 
-func day13_1(input [][]string) (result int) {
+func day13_1(machines []Machine) (result int) {
+
+	// DEBUG - тестируем на одной машине из списка
+	// result = calcCheapestWinCombination(machines[0])
+
+	for _, m := range machines {
+		result += calcCheapestWinCombination(m)
+	}
 
 	return result
 }
+
+// Функция вычисляет самую дешевую комбинацию нажатия кнопок A в B на игровом автомате, требуемую для перемещение клешни в координаты приза
+// Одно нажатие кнопки A стоит 3 монеты, одно нажатие кнопки B стоит 1 монету
+// Если комбинации не существут - функция возвращает 0
+func calcCheapestWinCombination(machine Machine) (result int) {
+
+	// успешные комбинации нажатия кнопок [A,B]
+	var success [][]int
+
+	// пробуем все комбинации нажатий кнопок от "ни разу" до лимита в 100 раз (лимит из условия задачи), сохраняем те, которые приводят к победе
+	for countA := 0; countA <= 100; countA++ {
+
+		if countA != 0 {
+			machine.PushButtonA()
+		}
+
+		if machine.Claw.x == machine.Prize.x && machine.Claw.y == machine.Prize.y { // попали в приз нажатием только кнопки А
+			success = append(success, []int{countA, 0})
+			break
+		}
+
+		if machine.Claw.x > machine.Prize.x || machine.Claw.y > machine.Prize.y { // проскочили приз нажатием только кнопки А
+			break
+		}
+
+		savedClawX := machine.Claw.x // сохраняем координаты клешни, для ее возвращения в исходную позицию после отработки вложенного цикла
+		savedClawY := machine.Claw.y
+
+		for countB := 1; countB <= 100; countB++ {
+
+			machine.PushButtonB()
+
+			// DEBUG
+			// var ding string
+			// if machine.Claw.x == machine.Prize.x && machine.Claw.y == machine.Prize.y {
+			// 	ding = "<<<<<<< DING!!!"
+			// }
+			// s := fmt.Sprintf("A(%v) B(%v) Claw:(%v %v) -- Prize:(%v %v) %v", countA, countB, machine.Claw.x, machine.Claw.y, machine.Prize.x, machine.Prize.y, ding)
+			// SaveToFile(s, OUTPUT_FILE_PATH)
+
+			if machine.Claw.x == machine.Prize.x && machine.Claw.y == machine.Prize.y { // попали в приз
+				success = append(success, []int{countA, countB})
+				machine.Claw.x = savedClawX // возвращаем клешню на состояние до внутреннего цикла
+				machine.Claw.y = savedClawY
+				break
+			}
+
+			if machine.Claw.x > machine.Prize.x || machine.Claw.y > machine.Prize.y { // проскочили приз
+				machine.Claw.x = savedClawX // возвращаем клешню на состояние до внутреннего цикла
+				machine.Claw.y = savedClawY
+				break
+			}
+		}
+	}
+
+	// поиск самого дешевого решения
+	if len(success) != 0 {
+
+		// fmt.Println("Win combinations: ", success) // DEBUG
+
+		for _, combination := range success {
+
+			costOfWin := combination[0]*3 + combination[1]*1
+
+			// fmt.Print("For A = ", combination[0], " B = ", combination[1], " ") // DEBUG
+			// fmt.Println("Cost of Win =", costOfWin)                             // DEBUG
+
+			if result == 0 {
+				result = costOfWin
+			} else if costOfWin < result {
+				result = costOfWin
+			}
+		}
+	}
+
+	return result
+}
+
+//TODO -- сделать вторую функцию calcCheapestWinCombination, вычисляющуу результат по методу Крамера. Сравнить результаты функций
 
 // Функция извлекает из файла filename набор исходных данных
 func GetData(filename string) (machines []Machine) {
@@ -90,29 +167,36 @@ func GetData(filename string) (machines []Machine) {
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
 
-	var strNums []string
+	var acc []string
 
-	// TODO parser (пустая строка - плохой подход, парсится 3 из 4)
 	for scanner.Scan() {
 
-		if scanner.Text() == "" { // начинается описание следующей машины, сохраняем предыдущую
+		patternPrize := regexp.MustCompile(`Prize:`) // содержит ли строка "Prize:", если содержит - то это последняя строка, описывающая автомат
+		strPrize := patternPrize.FindAllString(scanner.Text(), -1)
 
-			var intNums []int
+		patternNums := regexp.MustCompile(`\d+`) // выхватывает из строки числа
+		numsInLine := patternNums.FindAllString(scanner.Text(), -1)
 
-			for _, s := range strNums {
+		acc = append(acc, numsInLine...)
+
+		if len(strPrize) != 0 { // это последняя строка в блоке, описывающем отдельный автомат
+
+			var nums []int
+
+			for _, s := range acc {
 				num, err := strconv.Atoi(s)
 				if err != nil {
 					panic(err)
 				}
-				intNums = append(intNums, num)
+				nums = append(nums, num)
 			}
 
-			ax := intNums[0]
-			ay := intNums[1]
-			bx := intNums[2]
-			by := intNums[3]
-			prizeX := intNums[4]
-			prizeY := intNums[5]
+			ax := nums[0]
+			ay := nums[1]
+			bx := nums[2]
+			by := nums[3]
+			prizeX := nums[4]
+			prizeY := nums[5]
 
 			claw := Point{0, 0}
 			prize := Point{prizeX, prizeY}
@@ -120,12 +204,7 @@ func GetData(filename string) (machines []Machine) {
 
 			machines = append(machines, machine)
 
-			strNums = []string{} // сбрасываем накопитель значений для следующей итерации
-
-		} else {
-			pattern := regexp.MustCompile(`\d+`) // выхватывает из строки цифры
-			digitsInThisLine := pattern.FindAllString(scanner.Text(), -1)
-			strNums = append(strNums, digitsInThisLine...)
+			acc = []string{} // сбрасываем накопитель значений для следующей итерации
 		}
 	}
 
