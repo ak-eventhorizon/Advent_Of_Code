@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -22,10 +23,51 @@ type Point struct {
 	y int
 }
 
-// Структура представляет поле (двумерную матрицу), обладающее шириной lenX клеток и высотой lenY клеток
+// Структура представляет поле (двумерную матрицу), обладающее шириной lenX клеток, высотой lenY клеток и содержимым layout
 type Field struct {
-	lenX int
-	lenY int
+	lenX   int
+	lenY   int
+	layout [][]string
+}
+
+func (f *Field) Init(lenX, lenY int) {
+	f.lenX = lenX
+	f.lenY = lenY
+
+	for range lenY {
+		line := []string{}
+		for range lenX {
+			line = append(line, "0")
+		}
+		f.layout = append(f.layout, line)
+	}
+}
+
+func (f *Field) SaveToFile(filename string) {
+
+	os.Truncate(filename, 0) // очистка файла
+
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer file.Close()
+
+	for _, line := range f.layout {
+		s := strings.Join(line, "")
+		_, err2 := file.WriteString(s + "\n")
+		if err2 != nil {
+			panic(err2)
+		}
+	}
+
+	_, err3 := file.WriteString("\n")
+	if err3 != nil {
+		panic(err3)
+	}
+
 }
 
 // Структура представляет робота
@@ -34,10 +76,37 @@ type Field struct {
 type Robot struct {
 	Position Point
 	Velocity Point
-	Field    Field
+	Field    *Field
+}
+
+func (r *Robot) SetOnField(field *Field) {
+	r.Field = field
+
+	cell := r.Field.layout[r.Position.y][r.Position.x]
+	cellValue, err := strconv.Atoi(cell)
+	if err != nil {
+		panic(err)
+	}
+
+	cellValue += 1
+	cell = strconv.Itoa(cellValue)
+
+	r.Field.layout[r.Position.y][r.Position.x] = cell
 }
 
 func (r *Robot) Move() {
+
+	// уменьшаем на единицу значения клетки, из которой робот уходит
+	startCell := r.Field.layout[r.Position.y][r.Position.x]
+	cellValue, err := strconv.Atoi(startCell)
+	if err != nil {
+		panic(err)
+	}
+	cellValue -= 1
+	startCell = strconv.Itoa(cellValue)
+	r.Field.layout[r.Position.y][r.Position.x] = startCell
+
+	// вычисление клетки, в которую робот перемещается
 	x := r.Position.x + r.Velocity.x
 	y := r.Position.y + r.Velocity.y
 
@@ -58,6 +127,16 @@ func (r *Robot) Move() {
 	} else {
 		r.Position.y = y
 	}
+
+	// увеличиваем на единицу значения клетки, в которую робот попадает
+	endCell := r.Field.layout[r.Position.y][r.Position.x]
+	cellValue, err = strconv.Atoi(endCell)
+	if err != nil {
+		panic(err)
+	}
+	cellValue += 1
+	endCell = strconv.Itoa(cellValue)
+	r.Field.layout[r.Position.y][r.Position.x] = endCell
 }
 
 func (r *Robot) Display() {
@@ -77,7 +156,28 @@ func main() {
 	fmt.Printf("%s \n", time.Since(start)) // время выполнения функции
 }
 
-func day14_1(robots []Robot) (result int) {
+func day14_1(input []Robot) (result int) {
+
+	field := new(Field) // создание поля, на кототором будет происходить все движение
+	field.Init(11, 7)   // размер поля по условию задачи 101x103
+
+	robots := []Robot{} // всех роботов копируем в этот слайс, чтобы input оставить неизменным
+
+	// размещаем роботов на поле и сохраняем в рабочий слайс
+	for _, robot := range input {
+		robot.SetOnField(field)
+		robots = append(robots, robot)
+	}
+
+	field.SaveToFile(OUTPUT_FILE_PATH)
+
+	//DEBUG
+	// r1 := robots[0]
+	// for range 100 {
+	// 	r1.Move()
+	// field.SaveToFile(OUTPUT_FILE_PATH)
+	// 	time.Sleep(500 * time.Millisecond)
+	// }
 
 	return result
 }
@@ -108,10 +208,9 @@ func GetData(filename string) (robots []Robot) {
 			nums = append(nums, num)
 		}
 
-		field := Field{101, 103} // размер поля по условиям задачи
 		position := Point{nums[0], nums[1]}
 		velocity := Point{nums[2], nums[3]}
-		robot := Robot{position, velocity, field}
+		robot := Robot{position, velocity, nil} // на этом этапе роботы еще не размещены на поле
 
 		robots = append(robots, robot)
 	}
