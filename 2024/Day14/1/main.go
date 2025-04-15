@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"strconv"
@@ -73,6 +74,7 @@ func (f *Field) SaveToFile(filename string) {
 // Структура представляет робота
 // Position: точка в которой робот располагается в данное время
 // Velocity: смещение на которое робот перемещается за 1 ход (1 секунда)
+// Field: указатель на поле, на котором располагается робот
 type Robot struct {
 	Position Point
 	Velocity Point
@@ -82,16 +84,16 @@ type Robot struct {
 func (r *Robot) SetOnField(field *Field) {
 	r.Field = field
 
-	cell := r.Field.layout[r.Position.y][r.Position.x]
-	cellValue, err := strconv.Atoi(cell)
+	targetCellValue := r.Field.layout[r.Position.y][r.Position.x]
+	intValue, err := strconv.Atoi(targetCellValue)
 	if err != nil {
 		panic(err)
 	}
 
-	cellValue += 1
-	cell = strconv.Itoa(cellValue)
+	intValue += 1
+	targetCellValue = strconv.Itoa(intValue)
 
-	r.Field.layout[r.Position.y][r.Position.x] = cell
+	r.Field.layout[r.Position.y][r.Position.x] = targetCellValue
 }
 
 func (r *Robot) Move() {
@@ -158,8 +160,8 @@ func main() {
 
 func day14_1(input []Robot) (result int) {
 
-	field := new(Field) // создание поля, на кототором будет происходить все движение
-	field.Init(11, 7)   // размер поля по условию задачи 101x103
+	field := new(Field)  // создание поля, на кототором будет происходить все движение
+	field.Init(101, 103) // размер поля по условию задачи 101x103
 
 	robots := []Robot{} // всех роботов копируем в этот слайс, чтобы input оставить неизменным
 
@@ -169,16 +171,59 @@ func day14_1(input []Robot) (result int) {
 		robots = append(robots, robot)
 	}
 
+	// 100 итераций движения роботов на поле
+	for _, robot := range robots {
+		for range 100 {
+			robot.Move()
+		}
+	}
+
 	field.SaveToFile(OUTPUT_FILE_PATH)
 
-	//DEBUG
-	// r1 := robots[0]
-	// for range 100 {
-	// 	r1.Move()
-	// field.SaveToFile(OUTPUT_FILE_PATH)
-	// 	time.Sleep(500 * time.Millisecond)
-	// }
+	result = calcSafetyFactor(*field)
+	return result
+}
 
+// Функция производит вычисление поля по четвертям в соответствии с формулировкой задачи
+// Разделение на четверти матрицы 11x7:
+//
+//	00000  00000
+//	0Q100  00Q20
+//	00000  00000
+//
+//	00000  00000
+//	0Q300  00Q40
+//	00000  00000
+func calcSafetyFactor(f Field) (result int) {
+
+	separatorX := int(math.Floor(float64(f.lenX / 2))) // средний столбец в матрице (разделитель пополам по оси X)
+	separatorY := int(math.Floor(float64(f.lenY / 2))) // средняя строка в матрице (разделитель пополам по оси Y)
+
+	var Q1, Q2, Q3, Q4 int
+
+	for y := range f.lenY {
+		for x := range f.lenX {
+
+			if f.layout[y][x] != "0" {
+				value, err := strconv.Atoi(f.layout[y][x])
+				if err != nil {
+					panic(err)
+				}
+
+				if x < separatorX && y < separatorY { // попадает в первую четверть Q1
+					Q1 += value
+				} else if x > separatorX && y < separatorY { // попадает во вторую четверть Q2
+					Q2 += value
+				} else if x < separatorX && y > separatorY { // попадает в третью четверть Q3
+					Q3 += value
+				} else if x > separatorX && y > separatorY { // попадает в четвертую четверть Q4
+					Q4 += value
+				}
+			}
+		}
+	}
+
+	result = Q1 * Q2 * Q3 * Q4
 	return result
 }
 
