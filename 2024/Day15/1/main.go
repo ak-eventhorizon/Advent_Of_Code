@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 )
@@ -15,29 +16,203 @@ import (
 const INPUT_FILE_PATH string = "data.txt"
 const OUTPUT_FILE_PATH string = "output.txt"
 
+// Структура представляет поле (двумерную матрицу)
+// rX, rY - координаты робота @
+// layout - содержимое матрицы: @ - робот, # - стена, O - перемещаемый ящик, . - пустая клетка
+type Field struct {
+	rX     int
+	rY     int
+	layout [][]string
+}
+
+func (f *Field) SaveToFile(filename string) {
+
+	os.Truncate(filename, 0) // очистка файла
+
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer file.Close()
+
+	for _, line := range f.layout {
+		s := strings.Join(line, "")
+		_, err2 := file.WriteString(s + "\n")
+		if err2 != nil {
+			panic(err2)
+		}
+	}
+}
+
+func (f *Field) MoveRobot(direction string) {
+
+	var nX, nY int          // координаты точки, в которую произойдет движение
+	var stackToMove [][]int // набор точек [x,y] который нужно сдвинуть
+
+	switch direction {
+	case "^":
+		for nextY := f.rY; nextY >= 0; nextY-- { // от робота проверяем все точки вверх, собирая ящики, которые можно передвинуть до первого свободного поля или до стены
+			if f.layout[nextY][f.rX] == "@" || f.layout[nextY][f.rX] == "O" {
+				stackToMove = append(stackToMove, []int{f.rX, nextY})
+			} else if f.layout[nextY][f.rX] == "#" { // уперлись в стену, нет места для перемещения
+				break
+			} else if f.layout[nextY][f.rX] == "." { // нашлось свободное место для перемещения вверх
+				slices.Reverse(stackToMove) // переворачиваем стек и начинаем двигать каждый элемент на свободную ячейку вверх
+
+				for _, elem := range stackToMove {
+					cX := elem[0]
+					cY := elem[1]
+					value := f.layout[cY][cX]
+					nX = elem[0]
+					nY = elem[1] - 1
+
+					f.layout[cY][cX] = "."
+					f.layout[nY][nX] = value
+
+					// если двигаем робота - обновляем его координаты
+					if value == "@" {
+						f.rX = nX
+						f.rY = nY
+					}
+				}
+				break
+			}
+		}
+	case "v":
+		for nextY := f.rY; nextY < len(f.layout)-1; nextY++ {
+			if f.layout[nextY][f.rX] == "@" || f.layout[nextY][f.rX] == "O" {
+				stackToMove = append(stackToMove, []int{f.rX, nextY})
+			} else if f.layout[nextY][f.rX] == "#" {
+				break
+			} else if f.layout[nextY][f.rX] == "." {
+				slices.Reverse(stackToMove) // переворачиваем стек и начинаем двигать каждый элемент на свободную ячейку вниз
+
+				for _, elem := range stackToMove {
+					cX := elem[0]
+					cY := elem[1]
+					value := f.layout[cY][cX]
+					nX = elem[0]
+					nY = elem[1] + 1
+
+					f.layout[cY][cX] = "."
+					f.layout[nY][nX] = value
+
+					// если двигаем робота - обновляем его координаты
+					if value == "@" {
+						f.rX = nX
+						f.rY = nY
+					}
+				}
+				break
+			}
+		}
+	case "<":
+		for nextX := f.rX; nextX >= 0; nextX-- {
+			if f.layout[f.rY][nextX] == "@" || f.layout[f.rY][nextX] == "O" {
+				stackToMove = append(stackToMove, []int{nextX, f.rY})
+			} else if f.layout[f.rY][nextX] == "#" {
+				break
+			} else if f.layout[f.rY][nextX] == "." {
+				slices.Reverse(stackToMove) // переворачиваем стек и начинаем двигать каждый элемент на свободную ячейку влево
+
+				for _, elem := range stackToMove {
+					cX := elem[0]
+					cY := elem[1]
+					value := f.layout[cY][cX]
+					nX = elem[0] - 1
+					nY = elem[1]
+
+					f.layout[cY][cX] = "."
+					f.layout[nY][nX] = value
+
+					// если двигаем робота - обновляем его координаты
+					if value == "@" {
+						f.rX = nX
+						f.rY = nY
+					}
+				}
+				break
+			}
+		}
+	case ">":
+		for nextX := f.rX; nextX < len(f.layout[0])-1; nextX++ {
+			if f.layout[f.rY][nextX] == "@" || f.layout[f.rY][nextX] == "O" {
+				stackToMove = append(stackToMove, []int{nextX, f.rY})
+			} else if f.layout[f.rY][nextX] == "#" {
+				break
+			} else if f.layout[f.rY][nextX] == "." {
+				slices.Reverse(stackToMove) // переворачиваем стек и начинаем двигать каждый элемент на свободную ячейку вправо
+
+				for _, elem := range stackToMove {
+					cX := elem[0]
+					cY := elem[1]
+					value := f.layout[cY][cX]
+					nX = elem[0] + 1
+					nY = elem[1]
+
+					f.layout[cY][cX] = "."
+					f.layout[nY][nX] = value
+
+					// если двигаем робота - обновляем его координаты
+					if value == "@" {
+						f.rX = nX
+						f.rY = nY
+					}
+				}
+				break
+			}
+		}
+	}
+}
+
 func main() {
 	start := time.Now()
 
-	matrix, moveSet := GetData(INPUT_FILE_PATH)
-	answer := day15_1(matrix, moveSet)
+	field, moveSet := GetData(INPUT_FILE_PATH)
+	answer := day15_1(field, moveSet)
 	fmt.Println(answer)
 
 	fmt.Printf("%s \n", time.Since(start)) // время выполнения функции
 }
 
-func day15_1(matrix [][]string, moveSet []string) (result int) {
+func day15_1(field Field, moveSet []string) (result int) {
 
-	for _, v := range matrix {
-		fmt.Println(v)
+	// примитивный контроллер движения робота по полю
+	isLoopActive := true
+	for isLoopActive {
+		reader := bufio.NewReader(os.Stdin)
+		char, _, err := reader.ReadRune()
+
+		if err != nil {
+			panic(err)
+		}
+
+		switch char {
+		case 'w':
+			field.MoveRobot("^")
+			field.SaveToFile(OUTPUT_FILE_PATH)
+		case 'a':
+			field.MoveRobot("<")
+			field.SaveToFile(OUTPUT_FILE_PATH)
+		case 's':
+			field.MoveRobot("v")
+			field.SaveToFile(OUTPUT_FILE_PATH)
+		case 'd':
+			field.MoveRobot(">")
+			field.SaveToFile(OUTPUT_FILE_PATH)
+		case 'q':
+			fmt.Println("QUIT")
+			isLoopActive = false
+		}
 	}
-
-	fmt.Println(moveSet)
 
 	return result
 }
 
 // Функция извлекает из файла filename набор исходных данных
-func GetData(filename string) (matrix [][]string, moveSet []string) {
+func GetData(filename string) (field Field, moveSet []string) {
 
 	file, err := os.Open(filename)
 
@@ -59,7 +234,7 @@ func GetData(filename string) (matrix [][]string, moveSet []string) {
 
 		if !isMatrixFinished {
 			line := strings.Split(scanner.Text(), "")
-			matrix = append(matrix, line)
+			field.layout = append(field.layout, line)
 		} else {
 			line := strings.Split(scanner.Text(), "")
 			moveSet = append(moveSet, line...)
@@ -68,7 +243,17 @@ func GetData(filename string) (matrix [][]string, moveSet []string) {
 
 	file.Close()
 
-	return matrix, moveSet
+	// Поиск координат робота на поле
+	for y, line := range field.layout {
+		for x, char := range line {
+			if char == "@" {
+				field.rX = x
+				field.rY = y
+			}
+		}
+	}
+
+	return field, moveSet
 }
 
 // Функция дописывает строку line в файл filename
