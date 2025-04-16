@@ -179,34 +179,49 @@ func main() {
 
 func day15_1(field Field, moveSet []string) (result int) {
 
-	// примитивный контроллер движения робота по полю
-	isLoopActive := true
-	for isLoopActive {
-		reader := bufio.NewReader(os.Stdin)
-		char, _, err := reader.ReadRune()
+	for _, direction := range moveSet {
+		field.MoveRobot(direction)
+	}
 
-		if err != nil {
-			panic(err)
-		}
+	field.SaveToFile(OUTPUT_FILE_PATH)
 
-		switch char {
-		case 'w':
-			field.MoveRobot("^")
-			field.SaveToFile(OUTPUT_FILE_PATH)
-		case 'a':
-			field.MoveRobot("<")
-			field.SaveToFile(OUTPUT_FILE_PATH)
-		case 's':
-			field.MoveRobot("v")
-			field.SaveToFile(OUTPUT_FILE_PATH)
-		case 'd':
-			field.MoveRobot(">")
-			field.SaveToFile(OUTPUT_FILE_PATH)
-		case 'q':
-			fmt.Println("QUIT")
-			isLoopActive = false
+	// вычисление суммы GPS всех ящиков по условию задачи
+	for y, line := range field.layout {
+		for x, char := range line {
+			if char == "O" {
+				result += (100*y + x)
+			}
 		}
 	}
+
+	// примитивный контроллер движения робота по полю кнопками w-a-s-d (q-выход)
+	// isLoopActive := true
+	// for isLoopActive {
+	// 	reader := bufio.NewReader(os.Stdin)
+	// 	char, _, err := reader.ReadRune()
+
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+
+	// 	switch char {
+	// 	case 'w':
+	// 		field.MoveRobot("^")
+	// 		field.SaveToFile(OUTPUT_FILE_PATH)
+	// 	case 'a':
+	// 		field.MoveRobot("<")
+	// 		field.SaveToFile(OUTPUT_FILE_PATH)
+	// 	case 's':
+	// 		field.MoveRobot("v")
+	// 		field.SaveToFile(OUTPUT_FILE_PATH)
+	// 	case 'd':
+	// 		field.MoveRobot(">")
+	// 		field.SaveToFile(OUTPUT_FILE_PATH)
+	// 	case 'q':
+	// 		fmt.Println("QUIT")
+	// 		isLoopActive = false
+	// 	}
+	// }
 
 	return result
 }
