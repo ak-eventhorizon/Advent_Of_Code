@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -18,7 +19,7 @@ const OUTPUT_FILE_PATH string = "output.txt"
 
 // Структура представляет поле (двумерную матрицу)
 // rX, rY - координаты робота @
-// layout - содержимое матрицы: @ - робот, # - стена, O - перемещаемый ящик, . - пустая клетка
+// layout - содержимое матрицы: @ - робот, # - стена, [] - перемещаемый ящик, . - пустая клетка
 type Field struct {
 	rX     int
 	rY     int
@@ -52,59 +53,45 @@ func (f *Field) MoveRobot(direction string) {
 	var stackToMove [][]int // набор точек [x,y] который нужно сдвинуть
 
 	switch direction {
+
 	case "^":
+		nX = f.rX
+		nY = f.rY - 1
 
-		stackToMove = append(stackToMove, []int{f.rX, f.rY})
-		allMoveElements := moveUpRecur(stackToMove, f.layout)
+		if f.layout[nY][nX] == "." { // шаг робота в свободую клетку
+			f.layout[f.rY][f.rX] = "."
+			f.rX = nX
+			f.rY = nY
+			f.layout[f.rY][f.rX] = "@"
+		} else if f.layout[nY][nX] == "#" { // шаг робота в стену
+			break
+		} else if f.layout[nY][nX] == "[" || f.layout[nY][nX] == "]" { // шаг робота в перемещаемый ящик
+			stackToMove = append(stackToMove, []int{f.rX, f.rY})
+			allBoxesToMove := moveUpRecur(stackToMove, f.layout)
+			stackToMove = append(stackToMove, allBoxesToMove...) // все ящики цепочки и сам робот
 
-		fmt.Println("All blocks to move: ", allMoveElements)
+			// проверка, что ни один из объектов цепочки не упирается в стену, которая мешает перемещению всей цепочки
+			isStackMovable := true
+			for _, elem := range stackToMove {
+				x := elem[0]
+				y := elem[1]
+				if f.layout[y-1][x] == "#" {
+					isStackMovable = false
+					break
+				}
+			}
 
-		// for nextY := f.rY; nextY >= 0; nextY-- { // от робота проверяем все точки вверх, собирая ящики, которые можно передвинуть до первого свободного поля или до стены
-
-		// 	if f.layout[nextY][f.rX] == "@" || f.layout[nextY][f.rX] == "O" {
-		// 		stackToMove = append(stackToMove, []int{f.rX, nextY})
-		// 	} else if f.layout[nextY][f.rX] == "#" { // уперлись в стену, нет места для перемещения
-		// 		break
-		// 	} else if f.layout[nextY][f.rX] == "." { // нашлось свободное место для перемещения вверх
-		// 		slices.Reverse(stackToMove) // переворачиваем стек и начинаем двигать каждый элемент на свободную ячейку вверх
-
-		// 		for _, elem := range stackToMove {
-		// 			cX := elem[0]
-		// 			cY := elem[1]
-		// 			value := f.layout[cY][cX]
-		// 			nX = elem[0]
-		// 			nY = elem[1] - 1
-
-		// 			f.layout[cY][cX] = "."
-		// 			f.layout[nY][nX] = value
-
-		// 			// если двигаем робота - обновляем его координаты
-		// 			if value == "@" {
-		// 				f.rX = nX
-		// 				f.rY = nY
-		// 			}
-		// 		}
-		// 		break
-		// 	}
-		// }
-
-	case "v":
-		for nextY := f.rY; nextY < len(f.layout)-1; nextY++ {
-			if f.layout[nextY][f.rX] == "@" || f.layout[nextY][f.rX] == "O" {
-				stackToMove = append(stackToMove, []int{f.rX, nextY})
-			} else if f.layout[nextY][f.rX] == "#" {
-				break
-			} else if f.layout[nextY][f.rX] == "." {
-				slices.Reverse(stackToMove) // переворачиваем стек и начинаем двигать каждый элемент на свободную ячейку вниз
-
+			// если цепочку можно сдвинуть вверх - двигаем каждый ее элемент, начиная с конца
+			if isStackMovable {
+				slices.Reverse(stackToMove) // переворачиваем стек и начинаем двигать каждый элемент на свободную ячейку вверх
 				for _, elem := range stackToMove {
-					cX := elem[0]
-					cY := elem[1]
-					value := f.layout[cY][cX]
+					x := elem[0]
+					y := elem[1]
+					value := f.layout[y][x]
 					nX = elem[0]
-					nY = elem[1] + 1
+					nY = elem[1] - 1
 
-					f.layout[cY][cX] = "."
+					f.layout[y][x] = "."
 					f.layout[nY][nX] = value
 
 					// если двигаем робота - обновляем его координаты
@@ -113,9 +100,58 @@ func (f *Field) MoveRobot(direction string) {
 						f.rY = nY
 					}
 				}
-				break
 			}
 		}
+
+	case "v":
+		nX = f.rX
+		nY = f.rY + 1
+
+		if f.layout[nY][nX] == "." { // шаг робота в свободую клетку
+			f.layout[f.rY][f.rX] = "."
+			f.rX = nX
+			f.rY = nY
+			f.layout[f.rY][f.rX] = "@"
+		} else if f.layout[nY][nX] == "#" { // шаг робота в стену
+			break
+		} else if f.layout[nY][nX] == "[" || f.layout[nY][nX] == "]" { // шаг робота в перемещаемый ящик
+			stackToMove = append(stackToMove, []int{f.rX, f.rY})
+			allBoxesToMove := moveDownRecur(stackToMove, f.layout)
+			stackToMove = append(stackToMove, allBoxesToMove...) // все ящики цепочки и сам робот
+
+			// проверка, что ни один из объектов цепочки не упирается в стену, которая мешает перемещению всей цепочки
+			isStackMovable := true
+			for _, elem := range stackToMove {
+				x := elem[0]
+				y := elem[1]
+				if f.layout[y+1][x] == "#" {
+					isStackMovable = false
+					break
+				}
+			}
+
+			// если цепочку можно сдвинуть вверх - двигаем каждый ее элемент, начиная с конца
+			if isStackMovable {
+				slices.Reverse(stackToMove) // переворачиваем стек и начинаем двигать каждый элемент на свободную ячейку вверх
+				for _, elem := range stackToMove {
+					x := elem[0]
+					y := elem[1]
+					value := f.layout[y][x]
+					nX = elem[0]
+					nY = elem[1] + 1
+
+					f.layout[y][x] = "."
+					f.layout[nY][nX] = value
+
+					// если двигаем робота - обновляем его координаты
+					if value == "@" {
+						f.rX = nX
+						f.rY = nY
+					}
+				}
+			}
+		}
+
 	case "<":
 		for nextX := f.rX; nextX >= 0; nextX-- {
 			if f.layout[f.rY][nextX] == "@" || f.layout[f.rY][nextX] == "[" || f.layout[f.rY][nextX] == "]" {
@@ -144,6 +180,7 @@ func (f *Field) MoveRobot(direction string) {
 				break
 			}
 		}
+
 	case ">":
 		for nextX := f.rX; nextX < len(f.layout[0])-1; nextX++ {
 			if f.layout[f.rY][nextX] == "@" || f.layout[f.rY][nextX] == "[" || f.layout[f.rY][nextX] == "]" {
@@ -175,44 +212,6 @@ func (f *Field) MoveRobot(direction string) {
 	}
 }
 
-// TODO
-func moveUpRecur(stackToMove [][]int, layout [][]string) (result [][]int) {
-
-	var currentStack [][]int
-
-	for _, cell := range stackToMove {
-
-		x := cell[0]
-		y := cell[1]
-
-		if layout[y][x] == "@" && layout[y-1][x] == "[" {
-			currentStack = append(currentStack, []int{x, y - 1})     // []
-			currentStack = append(currentStack, []int{x + 1, y - 1}) // @
-		} else if layout[y][x] == "@" && layout[y-1][x] == "]" {
-			currentStack = append(currentStack, []int{x, y - 1})     // []
-			currentStack = append(currentStack, []int{x - 1, y - 1}) //  @
-		} else if layout[y][x] == "[" && layout[y-1][x] == "[" { // блок сверху вровень с текущим блоком
-			currentStack = append(currentStack, []int{x, y - 1})     // []
-			currentStack = append(currentStack, []int{x + 1, y - 1}) // [
-		} else if layout[y][x] == "]" && layout[y-1][x] == "[" { // блок сверху наполовину смещен вправо
-			currentStack = append(currentStack, []int{x, y - 1})     //  []
-			currentStack = append(currentStack, []int{x + 1, y - 1}) //  ]
-		} else if layout[y][x] == "[" && layout[y-1][x] == "]" { // блок сверху наполовину смещен влево
-			currentStack = append(currentStack, []int{x, y - 1})     // []
-			currentStack = append(currentStack, []int{x - 1, y - 1}) //  [
-		}
-	}
-
-	if len(currentStack) == 0 {
-		fmt.Println("len = 0") // DEBUG
-		return currentStack
-	} else {
-		fmt.Println("rec call - ", currentStack) // DEBUG
-		result = append(result, moveUpRecur(currentStack, layout)...)
-		return result
-	}
-}
-
 func main() {
 	start := time.Now()
 
@@ -225,48 +224,168 @@ func main() {
 
 func day15_2(field Field, moveSet []string) (result int) {
 
-	// for _, direction := range moveSet {
-	// 	field.MoveRobot(direction)
-	// }
+	for _, direction := range moveSet {
+		field.MoveRobot(direction)
+	}
 
 	field.SaveToFile(OUTPUT_FILE_PATH)
 
 	// вычисление суммы GPS всех ящиков по условию задачи
-	// for y, line := range field.layout {
-	// 	for x, char := range line {
-	// 		if char == "O" {
-	// 			result += (100*y + x)
-	// 		}
+	for y, line := range field.layout {
+		for x, char := range line {
+			if char == "[" {
+				result += (100*y + x)
+			}
+		}
+	}
+
+	// // примитивный контроллер движения робота по полю кнопками w-a-s-d (q-выход)
+	// isLoopActive := true
+	// for isLoopActive {
+	// 	reader := bufio.NewReader(os.Stdin)
+	// 	char, _, err := reader.ReadRune()
+
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+
+	// 	switch char {
+	// 	case 'w':
+	// 		field.MoveRobot("^")
+	// 		field.SaveToFile(OUTPUT_FILE_PATH)
+	// 	case 'a':
+	// 		field.MoveRobot("<")
+	// 		field.SaveToFile(OUTPUT_FILE_PATH)
+	// 	case 's':
+	// 		field.MoveRobot("v")
+	// 		field.SaveToFile(OUTPUT_FILE_PATH)
+	// 	case 'd':
+	// 		field.MoveRobot(">")
+	// 		field.SaveToFile(OUTPUT_FILE_PATH)
+	// 	case 'q':
+	// 		fmt.Println("QUIT")
+	// 		isLoopActive = false
 	// 	}
 	// }
 
-	// примитивный контроллер движения робота по полю кнопками w-a-s-d (q-выход)
-	isLoopActive := true
-	for isLoopActive {
-		reader := bufio.NewReader(os.Stdin)
-		char, _, err := reader.ReadRune()
+	return result
+}
 
-		if err != nil {
-			panic(err)
-		}
+// Функция рекурсивно строит цепочку из всех ящиков поля layout, которые можно сдвинуть вверх
+func moveUpRecur(stackToMove [][]int, layout [][]string) (result [][]int) {
 
-		switch char {
-		case 'w':
-			field.MoveRobot("^")
-			field.SaveToFile(OUTPUT_FILE_PATH)
-		case 'a':
-			field.MoveRobot("<")
-			field.SaveToFile(OUTPUT_FILE_PATH)
-		case 's':
-			field.MoveRobot("v")
-			field.SaveToFile(OUTPUT_FILE_PATH)
-		case 'd':
-			field.MoveRobot(">")
-			field.SaveToFile(OUTPUT_FILE_PATH)
-		case 'q':
-			fmt.Println("QUIT")
-			isLoopActive = false
+	var nextIter [][]int // набор элементов для перемещения в следующей итерации
+
+	for _, cell := range stackToMove {
+
+		x := cell[0]
+		y := cell[1]
+
+		if layout[y][x] == "@" && layout[y-1][x] == "[" {
+			nextIter = append(nextIter, []int{x, y - 1})     // []
+			nextIter = append(nextIter, []int{x + 1, y - 1}) // @
+		} else if layout[y][x] == "@" && layout[y-1][x] == "]" {
+			nextIter = append(nextIter, []int{x, y - 1})     // []
+			nextIter = append(nextIter, []int{x - 1, y - 1}) //  @
+		} else if layout[y][x] == "]" && layout[y][x+1] == "[" && layout[y-1][x] == "[" {
+			nextIter = append(nextIter, []int{x, y - 1})     //  []
+			nextIter = append(nextIter, []int{x + 1, y - 1}) // >][
+		} else if layout[y][x] == "[" && layout[y][x-1] == "]" && layout[y-1][x] == "]" {
+			nextIter = append(nextIter, []int{x, y - 1})     // []
+			nextIter = append(nextIter, []int{x - 1, y - 1}) // ][<
+		} else if layout[y][x] == "[" && layout[y-1][x] == "[" { // блок сверху вровень с текущим блоком
+			nextIter = append(nextIter, []int{x, y - 1})     // []
+			nextIter = append(nextIter, []int{x + 1, y - 1}) // [
+		} else if layout[y][x] == "]" && layout[y-1][x] == "[" { // блок сверху наполовину смещен вправо
+			nextIter = append(nextIter, []int{x, y - 1})     //  []
+			nextIter = append(nextIter, []int{x + 1, y - 1}) //  ]
+		} else if layout[y][x] == "[" && layout[y-1][x] == "]" { // блок сверху наполовину смещен влево
+			nextIter = append(nextIter, []int{x, y - 1})     // []
+			nextIter = append(nextIter, []int{x - 1, y - 1}) //  [
 		}
+	}
+
+	nextIter = removeDuplicates(nextIter)
+
+	if len(nextIter) == 0 {
+		return nextIter
+	}
+
+	// fmt.Println("rec call - ", nextIter) // DEBUG
+	nextIter = append(nextIter, moveUpRecur(nextIter, layout)...)
+	return nextIter
+}
+
+// Функция рекурсивно строит цепочку из всех ящиков поля layout, которые можно сдвинуть вниз
+func moveDownRecur(stackToMove [][]int, layout [][]string) (result [][]int) {
+
+	var nextIter [][]int // набор элементов для перемещения в следующей итерации
+
+	for _, cell := range stackToMove {
+
+		x := cell[0]
+		y := cell[1]
+
+		if layout[y][x] == "@" && layout[y+1][x] == "[" {
+			nextIter = append(nextIter, []int{x, y + 1})     // @
+			nextIter = append(nextIter, []int{x + 1, y + 1}) // []
+		} else if layout[y][x] == "@" && layout[y+1][x] == "]" {
+			nextIter = append(nextIter, []int{x, y + 1})     //  @
+			nextIter = append(nextIter, []int{x - 1, y + 1}) // []
+		} else if layout[y][x] == "]" && layout[y][x+1] == "[" && layout[y+1][x] == "[" {
+			nextIter = append(nextIter, []int{x, y + 1})     // >][
+			nextIter = append(nextIter, []int{x + 1, y + 1}) //  []
+		} else if layout[y][x] == "[" && layout[y][x-1] == "]" && layout[y+1][x] == "]" {
+			nextIter = append(nextIter, []int{x, y + 1})     // ][<
+			nextIter = append(nextIter, []int{x - 1, y + 1}) // []
+		} else if layout[y][x] == "[" && layout[y+1][x] == "[" { // блок снизу вровень с текущим блоком
+			nextIter = append(nextIter, []int{x, y + 1})     // [
+			nextIter = append(nextIter, []int{x + 1, y + 1}) // []
+		} else if layout[y][x] == "]" && layout[y+1][x] == "[" { // блок снизу наполовину смещен вправо
+			nextIter = append(nextIter, []int{x, y + 1})     //  ]
+			nextIter = append(nextIter, []int{x + 1, y + 1}) //  []
+		} else if layout[y][x] == "[" && layout[y+1][x] == "]" { // блок снизу наполовину смещен влево
+			nextIter = append(nextIter, []int{x, y + 1})     //  [
+			nextIter = append(nextIter, []int{x - 1, y + 1}) // []
+		}
+	}
+
+	nextIter = removeDuplicates(nextIter)
+
+	if len(nextIter) == 0 {
+		return nextIter
+	}
+
+	// fmt.Println("rec call - ", nextIter) // DEBUG
+	nextIter = append(nextIter, moveDownRecur(nextIter, layout)...)
+	return nextIter
+}
+
+// Функция удаляет дубли из произвольного слайса слайсов целых чисел
+func removeDuplicates(source [][]int) (result [][]int) {
+
+	// превращение слайса слайсов интов в слайс строк, который можно отсортировать и удалить дубли в сортированном
+	strSlice := []string{}
+	for _, elem := range source {
+		strElem := strings.Trim(strings.Replace(fmt.Sprint(elem), " ", "-", -1), "[]") // [3 4] --> "3-4"
+		strSlice = append(strSlice, strElem)
+	}
+
+	slices.Sort(strSlice)               // сортировка
+	strSlice = slices.Compact(strSlice) // удаление дубликатов
+
+	// превращение слайса строк обратно в слайс слайсов интов
+	for _, s := range strSlice {
+		elements := strings.Split(s, "-")
+		element := []int{}
+		for _, v := range elements {
+			num, err := strconv.Atoi(v)
+			if err != nil {
+				panic(err)
+			}
+			element = append(element, num)
+		}
+		result = append(result, element)
 	}
 
 	return result
