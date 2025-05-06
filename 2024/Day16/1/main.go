@@ -57,6 +57,7 @@ func main() {
 }
 
 func day16_1(field Field) (result int) {
+	// no time to research...
 	return result
 }
 
