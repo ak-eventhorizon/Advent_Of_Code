@@ -58,7 +58,7 @@ func main() {
 
 func day16_1(field Field) (result int) {
 
-	//TODO после отпуска
+	//TODO
 
 	return result
 }
