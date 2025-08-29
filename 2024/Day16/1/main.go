@@ -37,11 +37,13 @@ func (f *Field) SaveToFile(filename string) {
 
 	defer file.Close()
 
-	for _, line := range f.layout {
+	for i, line := range f.layout {
 		s := strings.Join(line, "")
-		_, err2 := file.WriteString(s + "\n")
-		if err2 != nil {
-			panic(err2)
+
+		if i == 0 {
+			SaveLineToFile(s, OUTPUT_FILE_PATH, false)
+		} else {
+			SaveLineToFile(s, OUTPUT_FILE_PATH, true)
 		}
 	}
 }
@@ -57,6 +59,8 @@ func main() {
 }
 
 func day16_1(field Field) (result int) {
+
+	field.SaveToFile(OUTPUT_FILE_PATH)
 	return result
 }
 
@@ -82,10 +86,11 @@ func GetData(filename string) (field Field) {
 	// Поиск координат старта и выхода
 	for y, line := range field.layout {
 		for x, char := range line {
-			if char == "S" {
+			switch char {
+			case "S":
 				field.sX = x
 				field.sY = y
-			} else if char == "E" {
+			case "E":
 				field.eX = x
 				field.eY = y
 			}
@@ -95,8 +100,8 @@ func GetData(filename string) (field Field) {
 	return field
 }
 
-// Функция дописывает строку line в файл filename
-func SaveToFile(line string, filename string) {
+// Функция дописывает строку line в файл filename (признак isNewLine определяет - начинать ли ее с сновой строки)
+func SaveLineToFile(line string, filename string, isNewLine bool) {
 
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
@@ -106,9 +111,13 @@ func SaveToFile(line string, filename string) {
 
 	defer file.Close()
 
-	_, err2 := file.WriteString(line + "\n")
+	if isNewLine {
+		_, err = file.WriteString("\n" + line)
+	} else {
+		_, err = file.WriteString(line)
+	}
 
-	if err2 != nil {
-		panic(err2)
+	if err != nil {
+		panic(err)
 	}
 }
