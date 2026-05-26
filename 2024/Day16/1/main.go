@@ -59,7 +59,6 @@ func main() {
 }
 
 func day16_1(field Field) (result int) {
-// TODO
 	field.SaveToFile(OUTPUT_FILE_PATH)
 	return result
 }
