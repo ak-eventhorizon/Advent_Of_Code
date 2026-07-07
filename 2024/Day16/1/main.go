@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -78,6 +79,10 @@ func GetData(filename string) (field Field) {
 	for scanner.Scan() {
 		line := strings.Split(scanner.Text(), "")
 		field.layout = append(field.layout, line)
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Printf("Error reading input: %v", err)
 	}
 
 	file.Close()
